@@ -1,0 +1,9 @@
+psycopg2-binary
+pandas
+boto3
+pytest
+pytest-cov
+python-dotenv
+bandit
+pip-audit
+moto
