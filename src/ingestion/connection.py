@@ -12,3 +12,12 @@ def get_totesys_connection():
         user=os.getenv("TOTESYS_USER"),
         password=os.getenv("TOTESYS_PASSWORD")
     )
+
+def check_connection():
+    conn = get_totesys_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT current_database(), current_user;")
+    result = cur.fetchone()
+    cur.close()
+    conn.close()
+    return result
