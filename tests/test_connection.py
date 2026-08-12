@@ -12,7 +12,6 @@ def test_connection():
         print("Database connection successful!")
         print(f"Database: {result[0]}")
         print(f"User: {result[1]}")
-
         conn.close()
 
     except Exception as e:
