@@ -1,5 +1,5 @@
 resource "aws_iam_user" "team" {
-  for_each = toset(["jack", "rico", "shamini", "serhan", "zhaoyu"])  # everyone except Muhammad, who owns the account
+  for_each = toset(["jack", "rico", "shamini", "serhan", "zhaoyu"])
   name     = each.value
 }
 
