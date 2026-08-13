@@ -1,18 +1,34 @@
 import boto3
-from src import extract_all_tables
-from src import get_totesys_connection
+from datetime import datetime, timezone
+
+from src.ingestion.connection import get_totesys_connection
+from src.ingestion.extract import extract_all_tables
+
+
+BUCKET_NAME = "marvel-etl-project-ingestion"
 
 
 connection = get_totesys_connection()
 
+s3 = boto3.client("s3")
+
 
 for table_name, json_body in extract_all_tables(connection):
 
-    s3 = boto3.client("s3")
+    timestamp = datetime.now(timezone.utc).strftime(
+        "%Y-%m-%d_%H-%M-%S-%f"
+    )
+
+    object_key = f"{table_name}/{timestamp}.json"
 
     s3.put_object(
-        Bucket="",
-        Key=f"{table_name}/data.json",
+        Bucket=BUCKET_NAME,
+        Key=object_key,
         Body=json_body,
-        ContentType="application/json"
+        ContentType="application/json",
     )
+
+    print(f"Uploaded: {object_key}")
+
+
+connection.close()
