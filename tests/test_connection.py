@@ -1,23 +1,16 @@
-from src.ingestion.connection import get_totesys_connection
+from src.ingestion.connection import check_connection
+from unittest.mock import patch, Mock
 
 
-def test_connection():
-    try:
-        conn = get_totesys_connection()
+@patch("src.ingestion.connection.get_totesys_connection")
+def test_check_connection_returns_database_and_user(mock_get_conn):
+    mock_conn = Mock()
+    mock_cursor = Mock()
+    mock_cursor.fetchone.return_value = ("totesys", "test_user")
+    mock_conn.cursor.return_value = mock_cursor
+    mock_get_conn.return_value = mock_conn
 
-        with conn.cursor() as cur:
-            cur.execute("SELECT current_database(), current_user;")
-            result = cur.fetchone()
+    result = check_connection()
 
-        print("Database connection successful!")
-        print(f"Database: {result[0]}")
-        print(f"User: {result[1]}")
-        conn.close()
-
-    except Exception as e:
-        print("Database connection failed!")
-        print(f"Error: {e}")
-
-
-if __name__ == "__main__":
-    test_connection()
+    assert result == ("totesys", "test_user")
+    mock_conn.close.assert_called_once()
