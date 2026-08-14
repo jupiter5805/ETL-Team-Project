@@ -2,10 +2,10 @@ import boto3
 import logging
 from datetime import datetime
 from botocore.exceptions import ClientError
->>>>>>> test/s3-upload
 
 
 logger = logging.getLogger(__name__)
+
 
 def upload_to_s3(table_name, json_body, bucket_name):
     s3 = boto3.client("s3")
