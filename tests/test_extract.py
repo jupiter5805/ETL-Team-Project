@@ -4,7 +4,7 @@ from datetime import date, datetime, time
 from decimal import Decimal
 import json
 
-from src.ingestion.extract import extract_table, rows_to_json, serialise_value
+from src.ingestion.extract import extract_table, rows_to_json, serialise_value, extract_all_tables, TABLES
 
 def test_extract_table_returns_rows_correctly():
     mock_rows = [{"id": 1, "name": "test"}]
@@ -40,3 +40,15 @@ def test_rows_to_json_serialises_values():
         result = rows_to_json(rows)
         assert '"id": 1' in result
         assert '"amount": "5.00"' in result
+
+@patch("src.ingestion.extract.rows_to_json")
+@patch("src.ingestion.extract.extract_table")
+def test_extract_all_tables_yields_for_each_table(mock_extract_table, mock_rows_to_json):
+    mock_extract_table.return_value = [{"id": 1}]
+    mock_rows_to_json.return_value = '[{"id": 1}]'
+    mock_conn = MagicMock()
+
+    results = list(extract_all_tables(mock_conn))
+
+    assert results == [(table, '[{"id": 1}]') for table in TABLES]
+    assert mock_extract_table.call_count == len(TABLES)
