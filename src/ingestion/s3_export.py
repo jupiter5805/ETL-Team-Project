@@ -1,26 +1,24 @@
 import boto3
-from src import extract_all_tables
-from src import get_totesys_connection
+import logging
 from datetime import datetime
+from botocore.exceptions import ClientError
 
 
-connection = get_totesys_connection()
+logger = logging.getLogger(__name__)
 
 
-
-table_extract = extract_all_tables(connection)
-
-def s3_json_upload (table_extract):
+def upload_to_s3(table_name, json_body, bucket_name):
     s3 = boto3.client("s3")
+    current_time = datetime.now().isoformat()
 
-    for table_name, json_body in table_extract:
-        current_time = datetime.now().isoformat()
-
-
+    try:
         s3.put_object(
-        Bucket="",
-        Key=f"{table_name}/{current_time}.json",
-        Body=json_body,
-        ContentType="application/json"
-    )
+            Bucket=bucket_name,
+            Key=f"{table_name}/{current_time}.json",
+            Body=json_body,
+            ContentType="application/json"
+        )
 
+    except ClientError:
+        logger.exception(f"Failed to upload {table_name} to S3")
+        raise
