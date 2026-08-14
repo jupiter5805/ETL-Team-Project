@@ -21,4 +21,4 @@ def upload_to_s3(table_name, json_body, bucket_name):
 
     except ClientError:
         logger.exception(f"Failed to upload {table_name} to S3")
-    raise
+        raise
