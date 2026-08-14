@@ -7,6 +7,29 @@ resource "aws_iam_group" "data_team" {
   name = "etl-project-team"
 }
 
+resource "aws_iam_group_policy" "tf_state_access" {
+  name  = "terraform-state-access"
+  group = aws_iam_group.data_team.name
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["s3:GetObject", "s3:PutObject", "s3:ListBucket"]
+        Resource = [
+          "arn:aws:s3:::etl-project-tf-state",
+          "arn:aws:s3:::etl-project-tf-state/*"
+        ]
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:DeleteItem"]
+        Resource = "arn:aws:dynamodb:eu-west-2:872709212089:table/etl-project-tf-locks"
+      }
+    ]
+  })
+}
+
 resource "aws_iam_group_policy" "s3_access" {
   name  = "s3-bucket-access"
   group = aws_iam_group.data_team.name
