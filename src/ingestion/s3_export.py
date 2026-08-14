@@ -14,7 +14,7 @@ def upload_to_s3(table_name, json_body, bucket_name):
     try:
         s3.put_object(
             Bucket=bucket_name,
-            Key=f"{table_name}/{current_time}.json",
+            Key=f"raw/{table_name}/{current_time}.json",
             Body=json_body,
             ContentType="application/json"
         )
