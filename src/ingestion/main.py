@@ -10,11 +10,13 @@ def lambda_handler(event, context):
 
     connection = get_totesys_connection()
 
-    for table_name, json_body in extract_all_tables(connection):
-        upload_to_s3(
-            table_name,
-            json_body,
-            bucket_name
-        )
-
-    connection.close()
+    try:
+        for table_name, json_body in extract_all_tables(connection):
+            upload_to_s3(
+                table_name,
+                json_body,
+                bucket_name
+            )
+            
+    finally:
+        connection.close()
