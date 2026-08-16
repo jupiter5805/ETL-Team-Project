@@ -1,8 +1,8 @@
 import os
 
-from src.ingestion.connection import get_totesys_connection
-from src.ingestion.extract import extract_all_tables
-from src.ingestion.s3_export import upload_to_s3
+from .connection import get_totesys_connection
+from .extract import extract_all_tables
+from .s3_export import upload_to_s3
 
 
 def lambda_handler(event, context):

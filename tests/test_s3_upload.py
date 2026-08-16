@@ -47,7 +47,7 @@ def test_upload_to_s3_creates_object():
         .decode("utf-8")
     )
 
-    assert uploaded_key.startswith("currency/")
+    assert uploaded_key.startswith("raw/currency/")
     assert uploaded_key.endswith(".json")
     assert uploaded_body == json_body
 
