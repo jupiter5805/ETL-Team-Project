@@ -63,9 +63,16 @@ resource "aws_lambda_function" "ingestion" {
 
   runtime = "python3.13"
 
-  handler = "ingestion.lambda_handler.lambda_handler"
+  handler = "ingestion.main.lambda_handler"
 
   filename = data.archive_file.lambda.output_path
 
   source_code_hash = data.archive_file.lambda.output_base64sha256
+  
+  environment {
+    variables = {
+      INGESTION_BUCKET_NAME = aws_s3_bucket.ingestion.bucket
+      TOTESYS_SECRET_NAME   = data.aws_secretsmanager_secret.totesys_db.name
+    }
+  }
 }
