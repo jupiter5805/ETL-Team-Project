@@ -60,7 +60,7 @@ resource "aws_iam_group_policy" "pipeline_access" {
       {
         Effect   = "Allow"
         Action   = "iam:PassRole"
-        Resource = "arn:aws:iam::*:role/lambda-*"
+        Resource = "arn:aws:iam::*:role/lambda*"
       }
     ]
   })
