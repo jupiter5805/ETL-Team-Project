@@ -4,7 +4,7 @@ from datetime import date, datetime, time
 from decimal import Decimal
 import json
 
-from src.ingestion.extract import extract_table, rows_to_json, serialise_value, extract_all_tables, TABLES
+from src.ingestion.extract import extract_table, extract_updated_rows, rows_to_json, serialise_value, extract_all_tables, TABLES
 
 def test_extract_table_returns_rows_correctly():
     mock_rows = [{"id": 1, "name": "test"}]
@@ -17,6 +17,24 @@ def test_extract_table_returns_rows_correctly():
 
     mock_cursor.execute.assert_called_once()
     assert result == mock_rows
+
+def test_extract_updated_rows_returns_rows_correctly():
+    mock_rows = [{"id": 1, "name": "test"}]
+    last_run = datetime(2026, 8, 15, 12, 0)
+
+    mock_conn = MagicMock()
+    mock_cursor = mock_conn.cursor.return_value.__enter__.return_value
+    mock_cursor.fetchall.return_value = mock_rows
+
+    result = extract_updated_rows(
+        mock_conn,
+        "staff",
+        last_run
+    )
+
+    mock_cursor.execute.assert_called_once()
+    assert result == mock_rows
+
 
 def test_serialise_value_converts_date_time_formats():
     dt = datetime(2024, 1, 1, 12, 30)
