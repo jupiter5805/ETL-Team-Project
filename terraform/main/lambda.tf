@@ -27,7 +27,8 @@ resource "aws_iam_policy" "lambda_s3" {
       Effect = "Allow"
 
       Action = [
-        "s3:PutObject"
+        "s3:PutObject",
+        "s3:GetObject"
       ]
 
       Resource = "${aws_s3_bucket.ingestion.arn}/*"
@@ -68,7 +69,7 @@ resource "aws_lambda_function" "ingestion" {
   filename = data.archive_file.lambda.output_path
 
   source_code_hash = data.archive_file.lambda.output_base64sha256
-  
+
   environment {
     variables = {
       INGESTION_BUCKET_NAME = aws_s3_bucket.ingestion.bucket
