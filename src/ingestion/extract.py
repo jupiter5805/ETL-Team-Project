@@ -1,7 +1,6 @@
 import json
 from datetime import date, datetime, time
 from decimal import Decimal
-
 from psycopg2 import sql
 from psycopg2.extras import RealDictCursor
 
@@ -51,3 +50,4 @@ def extract_all_tables(connection):
         rows = extract_table(connection, table_name)
         json_body = rows_to_json(rows)
         yield table_name, json_body
+
