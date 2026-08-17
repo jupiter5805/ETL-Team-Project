@@ -1,4 +1,4 @@
-from connection import get_warehouse_connection
+from src.ingestion.connection import get_warehouse_connection
 
 def seed():
     conn = get_warehouse_connection()
