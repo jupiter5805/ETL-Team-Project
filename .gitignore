@@ -10,3 +10,5 @@ __pycache__/
 crash.log
 lambda_package/
 *.zip
+lambda_layer/python/
+psycopg2_layer.zip

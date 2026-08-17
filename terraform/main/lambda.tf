@@ -23,16 +23,23 @@ resource "aws_iam_policy" "lambda_s3" {
   policy = jsonencode({
     Version = "2012-10-17"
 
-    Statement = [{
-      Effect = "Allow"
-
-      Action = [
-        "s3:PutObject",
-        "s3:GetObject"
-      ]
-
-      Resource = "${aws_s3_bucket.ingestion.arn}/*"
-    }]
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:PutObject",
+          "s3:GetObject"
+        ]
+        Resource = "${aws_s3_bucket.ingestion.arn}/*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:ListBucket"
+        ]
+        Resource = aws_s3_bucket.ingestion.arn
+      }
+    ]
   })
 }
 
@@ -57,6 +64,21 @@ data "archive_file" "lambda" {
 }
 
 
+data "archive_file" "psycopg2_layer" {
+  type        = "zip"
+  source_dir  = "${path.module}/../../lambda_layer"
+  output_path = "${path.module}/../../psycopg2_layer.zip"
+}
+
+# Creates a Lambda layer called psycopg2-layer using the ZIP weabove.
+resource "aws_lambda_layer_version" "psycopg2" {
+  filename            = data.archive_file.psycopg2_layer.output_path
+  layer_name          = "psycopg2-layer"
+  compatible_runtimes = ["python3.13"]
+
+  source_code_hash = data.archive_file.psycopg2_layer.output_base64sha256
+}
+
 resource "aws_lambda_function" "ingestion" {
   function_name = "database-automated-ingestion"
 
@@ -66,9 +88,14 @@ resource "aws_lambda_function" "ingestion" {
 
   handler = "ingestion.main.lambda_handler"
 
+  timeout = 60 
+  memory_size = 512
+
   filename = data.archive_file.lambda.output_path
 
   source_code_hash = data.archive_file.lambda.output_base64sha256
+
+  layers = [aws_lambda_layer_version.psycopg2.arn]
 
   environment {
     variables = {
