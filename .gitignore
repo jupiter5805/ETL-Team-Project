@@ -12,3 +12,4 @@ lambda_package/
 *.zip
 lambda_layer/python/
 psycopg2_layer.zip
+psycopg2_layer.zip
