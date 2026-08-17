@@ -1,7 +1,7 @@
 import boto3
 import json
 
-from src.transformation.transform import transform_staff
+from src.transformation.transform import transform_counterparty
 from src.transformation.write_parquet import (
     create_parquet,
     upload_parquet_to_s3
@@ -37,31 +37,31 @@ def read_latest_table_data(bucket_name, table_name):
 
 if __name__ == "__main__":
 
-    staff_data = read_latest_table_data(
+    counterparty_data = read_latest_table_data(
         "marvel-etl-project-ingestion",
-        "staff"
+        "counterparty"
     )
 
-    department_data = read_latest_table_data(
+    address_data = read_latest_table_data(
         "marvel-etl-project-ingestion",
-        "department"
+        "address"
     )
 
-    transformed_staff = transform_staff(
-        staff_data,
-        department_data
+    transformed_counterparty = transform_counterparty(
+        counterparty_data,
+        address_data
     )
 
     create_parquet(
-        transformed_staff,
-        "dim_staff.parquet"
+        transformed_counterparty,
+        "dim_counterparty.parquet"
     )
 
     uploaded_file = upload_parquet_to_s3(
-        "dim_staff.parquet",
-        "dim_staff",
+        "dim_counterparty.parquet",
+        "dim_counterparty",
         "marvel-etl-project-processed"
     )
 
-    print(transformed_staff)
+    print(transformed_counterparty)
     print(f"Uploaded to: {uploaded_file}")
