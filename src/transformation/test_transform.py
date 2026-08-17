@@ -5,6 +5,7 @@ from src.transformation.transform import (
     transform_design,
     transform_location,
     transform_staff,
+    transform_counterparty,
 )
 
 
@@ -102,8 +103,6 @@ def test_transform_location():
             "postal_code": "28441",
             "country": "Turkey",
             "phone": "1803 637401",
-            "created_at": "2022-11-03",
-            "last_updated": "2022-11-03",
         }
     ]
 
@@ -136,8 +135,6 @@ def test_transform_location_renames_address_id():
             "postal_code": "89470",
             "country": "Korea",
             "phone": "4949 998070",
-            "created_at": "2022-11-03",
-            "last_updated": "2022-11-03",
         }
     ]
 
@@ -175,8 +172,6 @@ def test_transform_staff():
             "last_name": "Franey",
             "department_id": 2,
             "email_address": "jeremie.franey@terrifictotes.com",
-            "created_at": "2022-11-03",
-            "last_updated": "2022-11-03",
         }
     ]
 
@@ -185,9 +180,6 @@ def test_transform_staff():
             "department_id": 2,
             "department_name": "Purchasing",
             "location": "Manchester",
-            "manager": "Naomi Lapaglia",
-            "created_at": "2022-11-03",
-            "last_updated": "2022-11-03",
         }
     ]
 
@@ -267,6 +259,167 @@ def test_transform_staff_removes_unwanted_columns():
     assert "manager" not in result[0]
 
 
+def test_transform_counterparty():
+    counterparty_data = [
+        {
+            "counterparty_id": 1,
+            "counterparty_legal_name": "Fahey and Sons",
+            "legal_address_id": 15,
+            "commercial_contact": "Micheal Toy",
+            "delivery_contact": "Mrs. Lucy Runolfsdottir",
+        }
+    ]
+
+    address_data = [
+        {
+            "address_id": 15,
+            "address_line_1": "605 Haskell Trafficway",
+            "address_line_2": "Axel Freeway",
+            "district": None,
+            "city": "East Bobbie",
+            "postal_code": "88253-4257",
+            "country": "Heard Island and McDonald Islands",
+            "phone": "9687 937447",
+        }
+    ]
+
+    result = transform_counterparty(
+        counterparty_data,
+        address_data,
+    )
+
+    expected = [
+        {
+            "counterparty_id": 1,
+            "counterparty_legal_name": "Fahey and Sons",
+            "counterparty_legal_address_line_1":
+                "605 Haskell Trafficway",
+            "counterparty_legal_address_line_2":
+                "Axel Freeway",
+            "counterparty_legal_district": None,
+            "counterparty_legal_city": "East Bobbie",
+            "counterparty_legal_postal_code": "88253-4257",
+            "counterparty_legal_country":
+                "Heard Island and McDonald Islands",
+            "counterparty_legal_phone_number": "9687 937447",
+        }
+    ]
+
+    assert result == expected
+
+
+def test_transform_counterparty_uses_correct_address():
+    counterparty_data = [
+        {
+            "counterparty_id": 1,
+            "counterparty_legal_name": "Fahey and Sons",
+            "legal_address_id": 15,
+        }
+    ]
+
+    address_data = [
+        {
+            "address_id": 2,
+            "address_line_1": "Wrong Address",
+            "address_line_2": None,
+            "district": None,
+            "city": "Wrong City",
+            "postal_code": "00000",
+            "country": "Wrong Country",
+            "phone": "0000",
+        },
+        {
+            "address_id": 15,
+            "address_line_1": "605 Haskell Trafficway",
+            "address_line_2": "Axel Freeway",
+            "district": None,
+            "city": "East Bobbie",
+            "postal_code": "88253-4257",
+            "country": "Heard Island and McDonald Islands",
+            "phone": "9687 937447",
+        },
+    ]
+
+    result = transform_counterparty(
+        counterparty_data,
+        address_data,
+    )
+
+    assert (
+        result[0]["counterparty_legal_address_line_1"]
+        == "605 Haskell Trafficway"
+    )
+
+
+def test_transform_counterparty_keeps_nullable_address_fields():
+    counterparty_data = [
+        {
+            "counterparty_id": 3,
+            "counterparty_legal_name": "Armstrong Inc",
+            "legal_address_id": 2,
+        }
+    ]
+
+    address_data = [
+        {
+            "address_id": 2,
+            "address_line_1": "179 Alexie Cliffs",
+            "address_line_2": None,
+            "district": None,
+            "city": "Aliso Viejo",
+            "postal_code": "99305-7380",
+            "country": "San Marino",
+            "phone": "9621 880720",
+        }
+    ]
+
+    result = transform_counterparty(
+        counterparty_data,
+        address_data,
+    )
+
+    assert result[0]["counterparty_legal_address_line_2"] is None
+    assert result[0]["counterparty_legal_district"] is None
+
+
+def test_transform_counterparty_removes_unwanted_columns():
+    counterparty_data = [
+        {
+            "counterparty_id": 1,
+            "counterparty_legal_name": "Fahey and Sons",
+            "legal_address_id": 15,
+            "commercial_contact": "Micheal Toy",
+            "delivery_contact": "Mrs. Lucy Runolfsdottir",
+            "created_at": "2022-11-03",
+            "last_updated": "2022-11-03",
+        }
+    ]
+
+    address_data = [
+        {
+            "address_id": 15,
+            "address_line_1": "605 Haskell Trafficway",
+            "address_line_2": "Axel Freeway",
+            "district": None,
+            "city": "East Bobbie",
+            "postal_code": "88253-4257",
+            "country": "Heard Island and McDonald Islands",
+            "phone": "9687 937447",
+        }
+    ]
+
+    result = transform_counterparty(
+        counterparty_data,
+        address_data,
+    )
+
+    assert "legal_address_id" not in result[0]
+    assert "commercial_contact" not in result[0]
+    assert "delivery_contact" not in result[0]
+    assert "created_at" not in result[0]
+    assert "last_updated" not in result[0]
+
+
 @pytest.mark.parametrize(
     "transform_function",
     [
@@ -275,9 +428,15 @@ def test_transform_staff_removes_unwanted_columns():
         transform_location,
     ],
 )
-def test_single_source_transform_returns_empty_list(transform_function):
+def test_single_source_transform_returns_empty_list(
+    transform_function,
+):
     assert transform_function([]) == []
 
 
 def test_transform_staff_returns_empty_list():
     assert transform_staff([], []) == []
+
+
+def test_transform_counterparty_returns_empty_list():
+    assert transform_counterparty([], []) == []
