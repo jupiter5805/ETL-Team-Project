@@ -1,7 +1,7 @@
 import boto3
 import json
 
-from src.transformation.transform import transform_counterparty
+from src.transformation.transform import transform_date
 from src.transformation.write_parquet import (
     create_parquet,
     upload_parquet_to_s3
@@ -37,31 +37,29 @@ def read_latest_table_data(bucket_name, table_name):
 
 if __name__ == "__main__":
 
-    counterparty_data = read_latest_table_data(
+    sales_order_data = read_latest_table_data(
         "marvel-etl-project-ingestion",
-        "counterparty"
+        "sales_order"
     )
 
-    address_data = read_latest_table_data(
-        "marvel-etl-project-ingestion",
-        "address"
-    )
-
-    transformed_counterparty = transform_counterparty(
-        counterparty_data,
-        address_data
-    )
+    transformed_date = transform_date(sales_order_data)
 
     create_parquet(
-        transformed_counterparty,
-        "dim_counterparty.parquet"
+        transformed_date,
+        "dim_date.parquet"
     )
 
     uploaded_file = upload_parquet_to_s3(
-        "dim_counterparty.parquet",
-        "dim_counterparty",
+        "dim_date.parquet",
+        "dim_date",
         "marvel-etl-project-processed"
     )
 
-    print(transformed_counterparty)
+    print("First 3 dates:")
+    print(transformed_date[:3])
+
+    print("Last 3 dates:")
+    print(transformed_date[-3:])
+
+    print(f"Total dates: {len(transformed_date)}")
     print(f"Uploaded to: {uploaded_file}")

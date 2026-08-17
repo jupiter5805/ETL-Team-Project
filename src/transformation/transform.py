@@ -1,3 +1,7 @@
+from datetime import date, datetime, timedelta
+import calendar
+
+
 CURRENCY_NAMES = {
     "GBP": "Pound Sterling",
     "USD": "US Dollar",
@@ -113,5 +117,57 @@ def transform_counterparty(counterparty_data, address_data):
         }
 
         transformed_data.append(transformed_counterparty)
+
+    return transformed_data
+
+
+def convert_to_date(value):
+    if isinstance(value, datetime):
+        return value.date()
+
+    if isinstance(value, date):
+        return value
+
+    return date.fromisoformat(value[:10])
+
+
+def transform_date(sales_order_data):
+    if not sales_order_data:
+        return []
+
+    dates = []
+
+    for sales_order in sales_order_data:
+        dates.append(convert_to_date(sales_order["created_at"]))
+        dates.append(convert_to_date(sales_order["last_updated"]))
+        dates.append(
+            convert_to_date(sales_order["agreed_delivery_date"])
+        )
+        dates.append(
+            convert_to_date(sales_order["agreed_payment_date"])
+        )
+
+    earliest_date = min(dates)
+    latest_date = max(dates)
+
+    transformed_data = []
+
+    current_date = earliest_date
+
+    while current_date <= latest_date:
+        transformed_date = {
+            "date_id": current_date,
+            "year": current_date.year,
+            "month": current_date.month,
+            "day": current_date.day,
+            "day_of_week": current_date.isoweekday(),
+            "day_name": calendar.day_name[current_date.weekday()],
+            "month_name": calendar.month_name[current_date.month],
+            "quarter": ((current_date.month - 1) // 3) + 1
+        }
+
+        transformed_data.append(transformed_date)
+
+        current_date = current_date + timedelta(days=1)
 
     return transformed_data
