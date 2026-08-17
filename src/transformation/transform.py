@@ -79,3 +79,39 @@ def transform_staff(staff_data, department_data):
         transformed_data.append(transformed_staff)
 
     return transformed_data
+
+
+def transform_counterparty(counterparty_data, address_data):
+    transformed_data = []
+
+    address_lookup = {
+        address["address_id"]: address
+        for address in address_data
+    }
+
+    for counterparty in counterparty_data:
+        address = address_lookup[counterparty["legal_address_id"]]
+
+        transformed_counterparty = {
+            "counterparty_id": counterparty["counterparty_id"],
+            "counterparty_legal_name":
+                counterparty["counterparty_legal_name"],
+            "counterparty_legal_address_line_1":
+                address["address_line_1"],
+            "counterparty_legal_address_line_2":
+                address["address_line_2"],
+            "counterparty_legal_district":
+                address["district"],
+            "counterparty_legal_city":
+                address["city"],
+            "counterparty_legal_postal_code":
+                address["postal_code"],
+            "counterparty_legal_country":
+                address["country"],
+            "counterparty_legal_phone_number":
+                address["phone"]
+        }
+
+        transformed_data.append(transformed_counterparty)
+
+    return transformed_data
