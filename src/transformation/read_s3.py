@@ -1,7 +1,7 @@
 import boto3
 import json
 
-from src.transformation.transform import transform_date
+from src.transformation.transform import transform_sales_order
 from src.transformation.write_parquet import (
     create_parquet,
     upload_parquet_to_s3
@@ -42,24 +42,24 @@ if __name__ == "__main__":
         "sales_order"
     )
 
-    transformed_date = transform_date(sales_order_data)
+    transformed_sales_orders = transform_sales_order(
+        sales_order_data
+    )
 
     create_parquet(
-        transformed_date,
-        "dim_date.parquet"
+        transformed_sales_orders,
+        "fact_sales_order.parquet"
     )
 
     uploaded_file = upload_parquet_to_s3(
-        "dim_date.parquet",
-        "dim_date",
+        "fact_sales_order.parquet",
+        "fact_sales_order",
         "marvel-etl-project-processed"
     )
 
-    print("First 3 dates:")
-    print(transformed_date[:3])
+    print("First 3 transformed sales orders:")
+    print(transformed_sales_orders[:3])
 
-    print("Last 3 dates:")
-    print(transformed_date[-3:])
+    print(f"Total sales orders: {len(transformed_sales_orders)}")
 
-    print(f"Total dates: {len(transformed_date)}")
     print(f"Uploaded to: {uploaded_file}")

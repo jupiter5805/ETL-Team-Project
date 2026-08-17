@@ -1,4 +1,5 @@
-from datetime import date, datetime
+from datetime import date, datetime, time
+from decimal import Decimal
 
 import pytest
 
@@ -9,6 +10,7 @@ from src.transformation.transform import (
     transform_staff,
     transform_counterparty,
     transform_date,
+    transform_sales_order,
 )
 
 
@@ -268,8 +270,6 @@ def test_transform_counterparty():
             "counterparty_id": 1,
             "counterparty_legal_name": "Fahey and Sons",
             "legal_address_id": 15,
-            "commercial_contact": "Micheal Toy",
-            "delivery_contact": "Mrs. Lucy Runolfsdottir",
         }
     ]
 
@@ -297,8 +297,7 @@ def test_transform_counterparty():
             "counterparty_legal_name": "Fahey and Sons",
             "counterparty_legal_address_line_1":
                 "605 Haskell Trafficway",
-            "counterparty_legal_address_line_2":
-                "Axel Freeway",
+            "counterparty_legal_address_line_2": "Axel Freeway",
             "counterparty_legal_district": None,
             "counterparty_legal_city": "East Bobbie",
             "counterparty_legal_postal_code": "88253-4257",
@@ -423,7 +422,7 @@ def test_transform_counterparty_removes_unwanted_columns():
     assert "last_updated" not in result[0]
 
 
-# ---------------- DIM_DATE TESTS ----------------
+# DIM DATE TESTS
 
 
 def test_transform_date_creates_correct_date_fields():
@@ -528,6 +527,201 @@ def test_transform_date_accepts_datetime_values():
 
 def test_transform_date_returns_empty_list_for_empty_input():
     assert transform_date([]) == []
+
+
+# FACT SALES ORDER TESTS
+
+
+def test_transform_sales_order():
+    sales_order_data = [
+        {
+            "sales_order_id": 2,
+            "created_at": "2022-11-03T14:20:52.186000",
+            "last_updated": "2022-11-03T14:20:52.186000",
+            "design_id": 3,
+            "staff_id": 19,
+            "counterparty_id": 8,
+            "units_sold": 42972,
+            "unit_price": "3.94",
+            "currency_id": 2,
+            "agreed_delivery_date": "2022-11-07",
+            "agreed_payment_date": "2022-11-08",
+            "agreed_delivery_location_id": 8,
+        }
+    ]
+
+    result = transform_sales_order(sales_order_data)
+
+    expected = [
+        {
+            "sales_order_id": 2,
+            "created_date": date(2022, 11, 3),
+            "created_time": time(14, 20, 52, 186000),
+            "last_updated_date": date(2022, 11, 3),
+            "last_updated_time": time(14, 20, 52, 186000),
+            "sales_staff_id": 19,
+            "counterparty_id": 8,
+            "units_sold": 42972,
+            "unit_price": Decimal("3.94"),
+            "currency_id": 2,
+            "design_id": 3,
+            "agreed_payment_date": date(2022, 11, 8),
+            "agreed_delivery_date": date(2022, 11, 7),
+            "agreed_delivery_location_id": 8,
+        }
+    ]
+
+    assert result == expected
+
+
+def test_transform_sales_order_splits_created_timestamp():
+    sales_order_data = [
+        {
+            "sales_order_id": 2,
+            "created_at": "2022-11-03T14:20:52.186000",
+            "last_updated": "2022-11-03T14:20:52.186000",
+            "design_id": 3,
+            "staff_id": 19,
+            "counterparty_id": 8,
+            "units_sold": 42972,
+            "unit_price": "3.94",
+            "currency_id": 2,
+            "agreed_delivery_date": "2022-11-07",
+            "agreed_payment_date": "2022-11-08",
+            "agreed_delivery_location_id": 8,
+        }
+    ]
+
+    result = transform_sales_order(sales_order_data)
+
+    assert result[0]["created_date"] == date(2022, 11, 3)
+    assert result[0]["created_time"] == time(14, 20, 52, 186000)
+
+
+def test_transform_sales_order_splits_last_updated_timestamp():
+    sales_order_data = [
+        {
+            "sales_order_id": 2,
+            "created_at": "2022-11-03T14:20:52.186000",
+            "last_updated": "2022-11-04T15:30:10.123000",
+            "design_id": 3,
+            "staff_id": 19,
+            "counterparty_id": 8,
+            "units_sold": 42972,
+            "unit_price": "3.94",
+            "currency_id": 2,
+            "agreed_delivery_date": "2022-11-07",
+            "agreed_payment_date": "2022-11-08",
+            "agreed_delivery_location_id": 8,
+        }
+    ]
+
+    result = transform_sales_order(sales_order_data)
+
+    assert result[0]["last_updated_date"] == date(2022, 11, 4)
+    assert result[0]["last_updated_time"] == time(15, 30, 10, 123000)
+
+
+def test_transform_sales_order_renames_staff_id():
+    sales_order_data = [
+        {
+            "sales_order_id": 2,
+            "created_at": "2022-11-03T14:20:52.186000",
+            "last_updated": "2022-11-03T14:20:52.186000",
+            "design_id": 3,
+            "staff_id": 19,
+            "counterparty_id": 8,
+            "units_sold": 42972,
+            "unit_price": "3.94",
+            "currency_id": 2,
+            "agreed_delivery_date": "2022-11-07",
+            "agreed_payment_date": "2022-11-08",
+            "agreed_delivery_location_id": 8,
+        }
+    ]
+
+    result = transform_sales_order(sales_order_data)
+
+    assert result[0]["sales_staff_id"] == 19
+    assert "staff_id" not in result[0]
+
+
+def test_transform_sales_order_converts_unit_price_to_decimal():
+    sales_order_data = [
+        {
+            "sales_order_id": 2,
+            "created_at": "2022-11-03T14:20:52.186000",
+            "last_updated": "2022-11-03T14:20:52.186000",
+            "design_id": 3,
+            "staff_id": 19,
+            "counterparty_id": 8,
+            "units_sold": 42972,
+            "unit_price": "3.94",
+            "currency_id": 2,
+            "agreed_delivery_date": "2022-11-07",
+            "agreed_payment_date": "2022-11-08",
+            "agreed_delivery_location_id": 8,
+        }
+    ]
+
+    result = transform_sales_order(sales_order_data)
+
+    assert result[0]["unit_price"] == Decimal("3.94")
+    assert isinstance(result[0]["unit_price"], Decimal)
+
+
+def test_transform_sales_order_converts_agreed_dates():
+    sales_order_data = [
+        {
+            "sales_order_id": 2,
+            "created_at": "2022-11-03T14:20:52.186000",
+            "last_updated": "2022-11-03T14:20:52.186000",
+            "design_id": 3,
+            "staff_id": 19,
+            "counterparty_id": 8,
+            "units_sold": 42972,
+            "unit_price": "3.94",
+            "currency_id": 2,
+            "agreed_delivery_date": "2022-11-07",
+            "agreed_payment_date": "2022-11-08",
+            "agreed_delivery_location_id": 8,
+        }
+    ]
+
+    result = transform_sales_order(sales_order_data)
+
+    assert result[0]["agreed_delivery_date"] == date(2022, 11, 7)
+    assert result[0]["agreed_payment_date"] == date(2022, 11, 8)
+
+
+def test_transform_sales_order_removes_source_only_columns():
+    sales_order_data = [
+        {
+            "sales_order_id": 2,
+            "created_at": "2022-11-03T14:20:52.186000",
+            "last_updated": "2022-11-03T14:20:52.186000",
+            "design_id": 3,
+            "staff_id": 19,
+            "counterparty_id": 8,
+            "units_sold": 42972,
+            "unit_price": "3.94",
+            "currency_id": 2,
+            "agreed_delivery_date": "2022-11-07",
+            "agreed_payment_date": "2022-11-08",
+            "agreed_delivery_location_id": 8,
+        }
+    ]
+
+    result = transform_sales_order(sales_order_data)
+
+    assert "created_at" not in result[0]
+    assert "last_updated" not in result[0]
+    assert "staff_id" not in result[0]
+    assert "sales_record_id" not in result[0]
+
+
+def test_transform_sales_order_returns_empty_list():
+    assert transform_sales_order([]) == []
 
 
 @pytest.mark.parametrize(

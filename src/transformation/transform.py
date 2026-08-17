@@ -1,4 +1,5 @@
 from datetime import date, datetime, timedelta
+from decimal import Decimal
 import calendar
 
 
@@ -169,5 +170,70 @@ def transform_date(sales_order_data):
         transformed_data.append(transformed_date)
 
         current_date = current_date + timedelta(days=1)
+
+    return transformed_data
+
+
+def transform_sales_order(sales_order_data):
+    transformed_data = []
+
+    for sales_order in sales_order_data:
+        created_at = datetime.fromisoformat(
+            sales_order["created_at"]
+        )
+
+        last_updated = datetime.fromisoformat(
+            sales_order["last_updated"]
+        )
+
+        transformed_sales_order = {
+            "sales_order_id":
+                sales_order["sales_order_id"],
+
+            "created_date":
+                created_at.date(),
+
+            "created_time":
+                created_at.time(),
+
+            "last_updated_date":
+                last_updated.date(),
+
+            "last_updated_time":
+                last_updated.time(),
+
+            "sales_staff_id":
+                sales_order["staff_id"],
+
+            "counterparty_id":
+                sales_order["counterparty_id"],
+
+            "units_sold":
+                sales_order["units_sold"],
+
+            "unit_price":
+                Decimal(sales_order["unit_price"]),
+
+            "currency_id":
+                sales_order["currency_id"],
+
+            "design_id":
+                sales_order["design_id"],
+
+            "agreed_payment_date":
+                date.fromisoformat(
+                    sales_order["agreed_payment_date"]
+                ),
+
+            "agreed_delivery_date":
+                date.fromisoformat(
+                    sales_order["agreed_delivery_date"]
+                ),
+
+            "agreed_delivery_location_id":
+                sales_order["agreed_delivery_location_id"]
+        }
+
+        transformed_data.append(transformed_sales_order)
 
     return transformed_data
