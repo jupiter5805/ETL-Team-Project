@@ -7,3 +7,4 @@ python-dotenv
 bandit
 pip-audit
 moto
+pyarrow
