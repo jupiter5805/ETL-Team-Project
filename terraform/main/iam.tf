@@ -36,8 +36,11 @@ resource "aws_iam_group_policy" "s3_access" {
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Effect   = "Allow"
-      Action   = ["s3:GetObject", "s3:PutObject", "s3:ListBucket", "s3:DeleteObject"]
+      Effect = "Allow"
+      Action = [
+        "s3:GetObject", "s3:PutObject", "s3:ListBucket", "s3:DeleteObject",
+        "s3:GetBucketPolicy", "s3:GetBucketVersioning", "s3:GetBucketPublicAccessBlock", "s3:GetBucketLocation"
+      ]
       Resource = [
         aws_s3_bucket.ingestion.arn, "${aws_s3_bucket.ingestion.arn}/*",
         aws_s3_bucket.processed.arn, "${aws_s3_bucket.processed.arn}/*"
@@ -61,9 +64,19 @@ resource "aws_iam_group_policy" "pipeline_access" {
         Effect   = "Allow"
         Action   = "iam:PassRole"
         Resource = "arn:aws:iam::*:role/lambda*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["iam:CreatePolicyVersion", "iam:DeletePolicyVersion"]
+        Resource = "arn:aws:iam::*:policy/lambda*"
       }
     ]
   })
+}
+
+resource "aws_iam_group_policy_attachment" "read_only" {
+  group      = aws_iam_group.data_team.name
+  policy_arn = "arn:aws:iam::aws:policy/ReadOnlyAccess"
 }
 
 resource "aws_iam_user_group_membership" "members" {

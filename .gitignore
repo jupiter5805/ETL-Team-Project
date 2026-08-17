@@ -8,3 +8,5 @@ __pycache__/
 *.tfstate
 *.tfstate.backup
 crash.log
+lambda_package/
+*.zip
