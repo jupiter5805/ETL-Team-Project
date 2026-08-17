@@ -1,3 +1,5 @@
+from datetime import date, datetime
+
 import pytest
 
 from src.transformation.transform import (
@@ -6,6 +8,7 @@ from src.transformation.transform import (
     transform_location,
     transform_staff,
     transform_counterparty,
+    transform_date,
 )
 
 
@@ -418,6 +421,113 @@ def test_transform_counterparty_removes_unwanted_columns():
     assert "delivery_contact" not in result[0]
     assert "created_at" not in result[0]
     assert "last_updated" not in result[0]
+
+
+# ---------------- DIM_DATE TESTS ----------------
+
+
+def test_transform_date_creates_correct_date_fields():
+    sales_order_data = [
+        {
+            "created_at": "2022-11-03T14:20:52.186",
+            "last_updated": "2022-11-03T14:20:52.186",
+            "agreed_delivery_date": "2022-11-03",
+            "agreed_payment_date": "2022-11-03",
+        }
+    ]
+
+    result = transform_date(sales_order_data)
+
+    expected = [
+        {
+            "date_id": date(2022, 11, 3),
+            "year": 2022,
+            "month": 11,
+            "day": 3,
+            "day_of_week": 4,
+            "day_name": "Thursday",
+            "month_name": "November",
+            "quarter": 4,
+        }
+    ]
+
+    assert result == expected
+
+
+def test_transform_date_uses_monday_as_day_one():
+    sales_order_data = [
+        {
+            "created_at": "2022-11-07T09:00:00",
+            "last_updated": "2022-11-07T09:00:00",
+            "agreed_delivery_date": "2022-11-07",
+            "agreed_payment_date": "2022-11-07",
+        }
+    ]
+
+    result = transform_date(sales_order_data)
+
+    assert result[0]["day_name"] == "Monday"
+    assert result[0]["day_of_week"] == 1
+
+
+def test_transform_date_creates_continuous_calendar():
+    sales_order_data = [
+        {
+            "created_at": "2022-11-03T14:20:52.186",
+            "last_updated": "2022-11-03T14:20:52.186",
+            "agreed_delivery_date": "2022-11-05",
+            "agreed_payment_date": "2022-11-07",
+        }
+    ]
+
+    result = transform_date(sales_order_data)
+
+    date_ids = [row["date_id"] for row in result]
+
+    expected_dates = [
+        date(2022, 11, 3),
+        date(2022, 11, 4),
+        date(2022, 11, 5),
+        date(2022, 11, 6),
+        date(2022, 11, 7),
+    ]
+
+    assert date_ids == expected_dates
+
+
+def test_transform_date_calculates_quarter_correctly():
+    sales_order_data = [
+        {
+            "created_at": "2023-07-01T10:00:00",
+            "last_updated": "2023-07-01T10:00:00",
+            "agreed_delivery_date": "2023-07-01",
+            "agreed_payment_date": "2023-07-01",
+        }
+    ]
+
+    result = transform_date(sales_order_data)
+
+    assert result[0]["quarter"] == 3
+    assert result[0]["month_name"] == "July"
+
+
+def test_transform_date_accepts_datetime_values():
+    sales_order_data = [
+        {
+            "created_at": datetime(2022, 11, 3, 14, 20),
+            "last_updated": datetime(2022, 11, 3, 15, 20),
+            "agreed_delivery_date": "2022-11-03",
+            "agreed_payment_date": "2022-11-03",
+        }
+    ]
+
+    result = transform_date(sales_order_data)
+
+    assert result[0]["date_id"] == date(2022, 11, 3)
+
+
+def test_transform_date_returns_empty_list_for_empty_input():
+    assert transform_date([]) == []
 
 
 @pytest.mark.parametrize(
