@@ -2,7 +2,7 @@ from src.initiation.connection_RDS import get_warehouse_connection
 from src.initiation.create_tables import create_tables
 from src.initiation.delete_tables import delete_tables
 
-def lambda_handler(event, context):
+def seed():
     conn = get_warehouse_connection()
     cur = conn.cursor()
 
@@ -12,12 +12,7 @@ def lambda_handler(event, context):
 
         conn.commit()
 
-        return {
-            "statusCode": 200,
-            "body": "Database tables created successfully"
-        }
-
-    except Exception as e:
+    except Exception:
         conn.rollback()
         raise
 
