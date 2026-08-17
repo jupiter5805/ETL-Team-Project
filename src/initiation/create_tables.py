@@ -1,31 +1,3 @@
-from src.ingestion.connection import get_warehouse_connection
-
-def seed():
-    conn = get_warehouse_connection()
-    cur = conn.cursor()
-
-    try:
-        cur.execute("""
-            DROP TABLE IF EXISTS fact_sales_order CASCADE;
-            DROP TABLE IF EXISTS dim_staff CASCADE;
-            DROP TABLE IF EXISTS dim_date CASCADE;
-            DROP TABLE IF EXISTS dim_location CASCADE;
-            DROP TABLE IF EXISTS dim_counterparty CASCADE;
-            DROP TABLE IF EXISTS dim_currency CASCADE;
-            DROP TABLE IF EXISTS dim_design CASCADE;   
-         """)
-        create_tables(cur)
-
-        conn.commit()
-
-    except Exception:
-        conn.rollback()
-        raise
-
-    finally:
-        cur.close()
-        conn.close()
-        
 def create_tables(cur):
     cur.execute("""
         CREATE TABLE IF NOT EXISTS dim_staff
@@ -109,7 +81,3 @@ def create_tables(cur):
             agreed_delivery_location_id INT NOT NULL REFERENCES dim_location(location_id)
         );      
     """)
-
-if __name__ == "__main__":
-    seed()
-
