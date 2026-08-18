@@ -104,3 +104,70 @@ resource "aws_lambda_function" "ingestion" {
     }
   }
 }
+
+#initialization
+data "archive_file" "initialization_lambda" {
+  type = "zip"
+
+  source_dir = (
+    "${path.module}/../../src/initialization"
+  )
+
+  output_path = (
+    "${path.module}/../../initialization_lambda.zip"
+  )
+
+  excludes = [
+    "__pycache__",
+    "*.pyc",
+  ]
+}
+
+resource "aws_lambda_function" "initialization" {
+  function_name = "totesys-dev-initialization"
+
+  filename = (
+    data.archive_file.initialization_lambda.output_path
+  )
+
+  source_code_hash = (
+    data.archive_file.initialization_lambda.output_base64sha256
+  )
+
+  role = aws_iam_role.initialization_lambda.arn
+
+  runtime = "python3.13"
+  handler = "lambda_function.lambda_handler"
+
+  layers = [
+    aws_lambda_layer_version.psycopg2.arn
+  ]
+
+  timeout     = 60
+  memory_size = 256
+
+  environment {
+    variables = {
+      DB_HOST = aws_db_instance.warehouse.address
+      DB_PORT = tostring(aws_db_instance.warehouse.port)
+      DB_NAME = aws_db_instance.warehouse.db_name
+
+      DB_SECRET_ARN = (
+        aws_db_instance.warehouse
+        .master_user_secret[0]
+        .secret_arn
+      )
+    }
+  }
+
+  vpc_config {
+    subnet_ids = [
+      aws_subnet.private_a.id,
+      aws_subnet.private_b.id
+    ]
+
+    security_group_ids = [
+      aws_security_group.lambda.id
+    ]
+  }
+}

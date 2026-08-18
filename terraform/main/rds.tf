@@ -1,5 +1,5 @@
 resource "aws_db_subnet_group" "warehouse" {
-  name = "totesys-dev--warehouse-subnets"
+  name = "totesys-dev-warehouse-subnets"
 
   subnet_ids = [
     aws_subnet.private_a.id,

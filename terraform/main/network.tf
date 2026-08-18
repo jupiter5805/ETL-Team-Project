@@ -61,3 +61,38 @@ resource "aws_security_group" "rds" {
     security_groups = [aws_security_group.lambda.id]
   }
 }
+
+#secret manage
+resource "aws_security_group" "secrets_endpoint" {
+  name        = "${local.name_prefix}-secrets-endpoint-sg"
+  description = "Allow Lambda to access Secrets Manager endpoint"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    description     = "HTTPS from Lambda"
+    from_port       = 443
+    to_port         = 443
+    protocol        = "tcp"
+    security_groups = [aws_security_group.lambda.id]
+  }
+
+  tags = local.common_tags
+}
+
+resource "aws_vpc_endpoint" "secretsmanager" {
+  vpc_id = aws_vpc.main.id
+
+  service_name      = "com.amazonaws.eu-west-2.secretsmanager"
+  vpc_endpoint_type = "Interface"
+
+  subnet_ids = [
+    aws_subnet.private_a.id,
+    aws_subnet.private_b.id
+  ]
+
+  security_group_ids = [
+    aws_security_group.secrets_endpoint.id
+  ]
+
+  private_dns_enabled = true
+}

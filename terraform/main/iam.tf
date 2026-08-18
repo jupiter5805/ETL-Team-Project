@@ -84,3 +84,56 @@ resource "aws_iam_user_group_membership" "members" {
   user     = each.value.name
   groups   = [aws_iam_group.data_team.name]
 }
+
+resource "aws_iam_role" "initialization_lambda" {
+  name = "totesys-dev-initialization-lambda-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+
+    Statement = [
+      {
+        Effect = "Allow"
+
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
+
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+
+  tags = local.common_tags
+}
+
+resource "aws_iam_role_policy_attachment" "initialization_vpc_access" {
+  role       = aws_iam_role.initialization_lambda.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+}
+
+resource "aws_iam_role_policy" "initialization_secret_access" {
+  name = "totesys-dev-initialization-secret-access"
+  role = aws_iam_role.schema_lambda.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+
+    Statement = [
+      {
+        Effect = "Allow"
+
+        Action = [
+          "secretsmanager:GetSecretValue",
+          "secretsmanager:DescribeSecret"
+        ]
+
+        Resource = (
+          aws_db_instance.warehouse
+          .master_user_secret[0]
+          .secret_arn
+        )
+      }
+    ]
+  })
+}
