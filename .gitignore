@@ -8,3 +8,8 @@ __pycache__/
 *.tfstate
 *.tfstate.backup
 crash.log
+lambda_package/
+*.zip
+lambda_layer/python/
+psycopg2_layer.zip
+psycopg2_layer.zip

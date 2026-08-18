@@ -6,7 +6,7 @@ resource "aws_sns_topic" "lambda_failure_alerts" {
 resource "aws_sns_topic_subscription" "lambda_failure_email" {
   topic_arn = aws_sns_topic.lambda_failure_alerts.arn
   protocol  = "email"
-  endpoint  = "YOUR_EMAIL_ADDRESS"
+  endpoint  = "jinnt@hotmail.co.uk"
 }
 
 
