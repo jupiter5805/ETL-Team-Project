@@ -1,5 +1,3 @@
-import psycopg2
-
 def create_tables(connection):
     with connection.cursor() as cursor:
         cur.execute("""
