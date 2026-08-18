@@ -14,11 +14,11 @@ def test_read_latest_table_data(mock_boto_client):
     mock_s3.list_objects_v2.return_value = {
         "Contents": [
             {
-                "Key": "currency/old.json",
+                "Key": "raw/currency/old.json",
                 "LastModified": datetime(2026, 8, 16, 10, 0)
             },
             {
-                "Key": "currency/new.json",
+                "Key": "raw/currency/new.json",
                 "LastModified": datetime(2026, 8, 17, 10, 0)
             }
         ]
@@ -46,10 +46,10 @@ def test_read_latest_table_data(mock_boto_client):
 
     mock_s3.list_objects_v2.assert_called_once_with(
         Bucket="marvel-etl-project-ingestion",
-        Prefix="currency/"
+        Prefix="raw/currency/"
     )
 
     mock_s3.get_object.assert_called_once_with(
         Bucket="marvel-etl-project-ingestion",
-        Key="currency/new.json"
+        Key="raw/currency/new.json"
     )

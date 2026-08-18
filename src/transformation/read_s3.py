@@ -11,7 +11,7 @@ from src.transformation.write_parquet import (
 def read_latest_table_data(bucket_name, table_name):
     s3 = boto3.client("s3")
 
-    prefix = f"{table_name}/"
+    prefix = f"raw/{table_name}/"
 
     response = s3.list_objects_v2(
         Bucket=bucket_name,
