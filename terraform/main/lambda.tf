@@ -110,7 +110,7 @@ data "archive_file" "initialization_lambda" {
   type = "zip"
 
   source_dir = (
-    "${path.module}/../../src/initialization"
+    "${path.module}/../../src"
   )
 
   output_path = (
@@ -137,7 +137,7 @@ resource "aws_lambda_function" "initialization" {
   role = aws_iam_role.initialization_lambda.arn
 
   runtime = "python3.13"
-  handler = "lambda_function.lambda_handler"
+  handler = "initialization.lambda_function.lambda_handler"
 
   layers = [
     aws_lambda_layer_version.psycopg2.arn

@@ -1,19 +1,22 @@
-from src.initialization.connect_RDS import get_connection
-from src.initialization.create import create_tables
-from src.initialization.delete import delete_tables
+from .connect_RDS import get_connection
+from .create import create_tables
+from .delete import delete_tables
 
 
 def seed():
-    conn = get_connection()
+    connection = get_connection()
+
     try:
-        delete_tables(conn)
-        create_tables(conn)
-        conn.commit()
+        delete_tables(connection)
+        create_tables(connection)
+        connection.commit()
+
     except Exception:
-        conn.rollback()
+        connection.rollback()
         raise
+
     finally:
-        conn.close()
+        connection.close()
 
 
 if __name__ == "__main__":
