@@ -1,12 +1,11 @@
 import boto3
 import json
 
-from src.transformation.transform import transform_sales_order
-from src.transformation.write_parquet import (
+from .transform import transform_sales_order
+from .write_parquet import (
     create_parquet,
     upload_parquet_to_s3
 )
-
 
 def read_latest_table_data(bucket_name, table_name):
     s3 = boto3.client("s3")
