@@ -18,7 +18,7 @@ TABLES = (
     "purchase_order",
     "payment_type",
     "transaction",
-    )
+)
 
 
 def extract_table(connection, table_name):
@@ -32,12 +32,14 @@ def extract_table(connection, table_name):
         rows = cursor.fetchall()
     return rows
 
+
 def serialise_value(value):
     if isinstance(value, (datetime, date, time)):
         return value.isoformat()
 
     if isinstance(value, Decimal):
         return str(value)
+
 
 def rows_to_json(rows):
     return json.dumps(
@@ -46,27 +48,40 @@ def rows_to_json(rows):
         ensure_ascii=False,
     )
 
-def extract_all_tables(connection, last_run=None):
+
+def extract_all_tables(
+    connection,
+    last_run=None,
+    current_run=None,
+):
     for table_name in TABLES:
         if last_run:
             rows = extract_updated_rows(
                 connection,
                 table_name,
-                last_run
+                last_run,
+                current_run,
             )
         else:
             rows = extract_table(
                 connection,
-                table_name
+                table_name,
             )
 
         json_body = rows_to_json(rows)
         yield table_name, json_body
 
-def extract_updated_rows(connection, table_name, last_run):
+
+def extract_updated_rows(
+    connection,
+    table_name,
+    last_run,
+    current_run,
+):
     query = sql.SQL("""
         SELECT * FROM {}
         WHERE last_updated > %s
+        AND last_updated <= %s
     """).format(
         sql.Identifier(table_name)
     )
@@ -74,7 +89,13 @@ def extract_updated_rows(connection, table_name, last_run):
     with connection.cursor(
         cursor_factory=RealDictCursor
     ) as cursor:
-        cursor.execute(query, (last_run,))
+        cursor.execute(
+            query,
+            (
+                last_run,
+                current_run,
+            ),
+        )
         rows = cursor.fetchall()
 
-    return rows        
+    return rows
