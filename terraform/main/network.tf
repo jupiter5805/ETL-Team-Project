@@ -75,8 +75,6 @@ resource "aws_security_group" "secrets_endpoint" {
     protocol        = "tcp"
     security_groups = [aws_security_group.lambda.id]
   }
-
-  tags = local.common_tags
 }
 
 resource "aws_vpc_endpoint" "secretsmanager" {
