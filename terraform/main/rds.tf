@@ -1,3 +1,23 @@
+resource "aws_security_group" "rds" {
+  name = "totesys-dev-warehouse-sg"
+  vpc_id = aws_vpc.main.id
+
+  ingress {
+    from_port       = 5432
+    to_port         = 5432
+    protocol        = "tcp"
+    security_groups = [aws_security_group.lambda_sg.id]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+
 resource "aws_db_subnet_group" "warehouse" {
   name = "totesys-dev-warehouse-subnets"
 
@@ -29,6 +49,9 @@ resource "aws_db_instance" "warehouse" {
     aws_security_group.rds.id
   ]
 
-  publicly_accessible = false
-  multi_az            = false
+  publicly_accessible     = false
+  multi_az                = false
+  skip_final_snapshot     = true
+  backup_retention_period = 7
+  apply_immediately       = true
 }
