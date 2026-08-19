@@ -64,7 +64,7 @@ resource "aws_security_group" "rds" {
 
 #secret manage
 resource "aws_security_group" "secrets_endpoint" {
-  name        = "${local.name_prefix}-secrets-endpoint-sg"
+  name        = "totesys-dev-secrets-endpoint-sg"
   description = "Allow Lambda to access Secrets Manager endpoint"
   vpc_id      = aws_vpc.main.id
 
