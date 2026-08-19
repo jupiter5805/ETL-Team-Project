@@ -34,6 +34,12 @@ Loading Lambda
         v
 PostgreSQL RDS
 Data Warehouse
+        |
+        v
+Dashboard Query Lambda
+        |
+        v
+Streamlit Dashboard
 ```
 
 ### Automated Pipeline
@@ -183,6 +189,8 @@ Examples include:
 
 Sales-order timestamps are separated into date and time values for the warehouse.
 
+The transformation layer also uses S3 pagination when rebuilding current-state dimension data, so it is not limited to the first 1,000 objects under a raw table prefix.
+
 ---
 
 ## 3. Loading
@@ -313,9 +321,13 @@ The sales fact table is designed to support multiple historical versions of a sa
 
 The PostgreSQL RDS warehouse is deployed inside private VPC subnets.
 
-The Loading and Initialization Lambdas are also configured inside the VPC so they can connect securely to RDS.
+The Loading, Initialization, and Dashboard Query Lambdas are configured inside the VPC so they can connect securely to RDS.
+
+The RDS database remains private and is not exposed directly to the local Streamlit application.
 
 An S3 VPC endpoint allows the private Loading Lambda to access processed S3 data without requiring public internet access.
+
+A Secrets Manager VPC endpoint allows private Lambdas to retrieve database credentials securely.
 
 ---
 
@@ -333,6 +345,7 @@ Examples include:
 - Secrets Manager access
 - CloudWatch logging
 - VPC execution permissions
+- Lambda invocation for the dashboard client
 
 Security checks are also performed using Bandit and pip-audit.
 
@@ -401,6 +414,7 @@ This includes:
 - CloudWatch alarms
 - SNS alerts
 - Secrets Manager permissions
+- Dashboard Query Lambda
 
 Terraform state is stored remotely so that the team shares the same infrastructure state.
 
@@ -495,12 +509,14 @@ Run the full test suite with coverage:
 python -m pytest tests --cov=src --cov-fail-under=90
 ```
 
-The current project contains:
+The current verified test run contains:
 
 ```text
-106 automated tests
-91%+ overall test coverage
+119 automated tests passed
+92.90% overall test coverage
 ```
+
+The `src/dashboard_query/lambda_function.py` module is covered at 100%.
 
 The required minimum coverage is 90%.
 
@@ -645,6 +661,68 @@ Real ToteSys sales-order records have successfully passed through Transformation
 
 The pipeline also successfully loads dimension data before fact data.
 
+The deployed Transformation Lambda has also been smoke-tested after the S3 pagination update and successfully produced fresh Parquet outputs.
+
+---
+
+# Dashboard
+
+The project includes a Streamlit sales dashboard in:
+
+```text
+dashboard/app.py
+```
+
+The dashboard does not connect directly to the private RDS database.
+
+Instead it uses this architecture:
+
+```text
+Streamlit Dashboard
+        |
+        | AWS Lambda Invoke
+        v
+warehouse-dashboard-query
+        |
+        | Private VPC connection
+        v
+PostgreSQL RDS Warehouse
+```
+
+The `warehouse-dashboard-query` Lambda is implemented in:
+
+```text
+src/dashboard_query/lambda_function.py
+```
+
+It queries the warehouse directly and returns dashboard data including:
+
+- available currency and country filters
+- sales-order count
+- historical fact-version count
+- units sold
+- sales value
+- daily sales values
+- top designs
+- top counterparties
+- sales by staff
+- orders by country
+- recent sales orders
+
+Headline business metrics use the latest version of each sales order.
+
+Historical fact rows remain available separately in the warehouse.
+
+Currency is selected explicitly in the dashboard so values from GBP, EUR, and USD are not added together into one monetary total.
+
+Run the dashboard from the project root with:
+
+```bash
+streamlit run dashboard/app.py
+```
+
+The local AWS credentials used to run the dashboard must have permission to invoke the `warehouse-dashboard-query` Lambda.
+
 ---
 
 # Project Structure
@@ -656,13 +734,18 @@ ETL-Team-Project/
 │   └── workflows/
 │       └── ci.yml
 |
+├── dashboard/
+│   └── app.py
+|
 ├── src/
+│   ├── dashboard_query/
 │   ├── ingestion/
 │   ├── transformation/
 │   ├── loading/
 │   └── initialization/
 |
 ├── tests/
+│   ├── dashboard_query/
 │   ├── ingestion/
 │   ├── transform/
 │   ├── loading/
@@ -702,12 +785,15 @@ Optional extension functionality is outside the scope of the current implementat
 
 | Check | Status |
 |---|---|
-| Automated tests | Passed |
-| Test coverage above 90% | Passed |
+| Automated tests | 119 passed |
+| Test coverage | 92.90% |
+| Dashboard Query Lambda coverage | 100% |
 | Flake8 / PEP8 | Passed |
 | Bandit security scan | Passed |
 | pip-audit | Passed |
 | GitHub Actions CI | Passed |
 | ToteSys to RDS pipeline | Verified |
+| RDS-backed Streamlit dashboard | Verified |
+| S3 pagination | Implemented and smoke-tested |
 | CloudWatch monitoring | Implemented |
 | EventBridge scheduling | Implemented |
