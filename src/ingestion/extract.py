@@ -1,6 +1,7 @@
 import json
 from datetime import date, datetime, time
 from decimal import Decimal
+
 from psycopg2 import sql
 from psycopg2.extras import RealDictCursor
 
@@ -45,9 +46,35 @@ def rows_to_json(rows):
         ensure_ascii=False,
     )
 
-def extract_all_tables(connection):
+def extract_all_tables(connection, last_run=None):
     for table_name in TABLES:
-        rows = extract_table(connection, table_name)
+        if last_run:
+            rows = extract_updated_rows(
+                connection,
+                table_name,
+                last_run
+            )
+        else:
+            rows = extract_table(
+                connection,
+                table_name
+            )
+
         json_body = rows_to_json(rows)
         yield table_name, json_body
 
+def extract_updated_rows(connection, table_name, last_run):
+    query = sql.SQL("""
+        SELECT * FROM {}
+        WHERE last_updated > %s
+    """).format(
+        sql.Identifier(table_name)
+    )
+
+    with connection.cursor(
+        cursor_factory=RealDictCursor
+    ) as cursor:
+        cursor.execute(query, (last_run,))
+        rows = cursor.fetchall()
+
+    return rows        

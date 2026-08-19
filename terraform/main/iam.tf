@@ -36,8 +36,11 @@ resource "aws_iam_group_policy" "s3_access" {
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Effect   = "Allow"
-      Action   = ["s3:GetObject", "s3:PutObject", "s3:ListBucket", "s3:DeleteObject"]
+      Effect = "Allow"
+      Action = [
+        "s3:GetObject", "s3:PutObject", "s3:ListBucket", "s3:DeleteObject",
+        "s3:GetBucketPolicy", "s3:GetBucketVersioning", "s3:GetBucketPublicAccessBlock", "s3:GetBucketLocation"
+      ]
       Resource = [
         aws_s3_bucket.ingestion.arn, "${aws_s3_bucket.ingestion.arn}/*",
         aws_s3_bucket.processed.arn, "${aws_s3_bucket.processed.arn}/*"
@@ -60,14 +63,77 @@ resource "aws_iam_group_policy" "pipeline_access" {
       {
         Effect   = "Allow"
         Action   = "iam:PassRole"
-        Resource = "arn:aws:iam::*:role/lambda-*"
+        Resource = "arn:aws:iam::*:role/lambda*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["iam:CreatePolicyVersion", "iam:DeletePolicyVersion"]
+        Resource = "arn:aws:iam::*:policy/lambda*"
       }
     ]
   })
+}
+
+resource "aws_iam_group_policy_attachment" "read_only" {
+  group      = aws_iam_group.data_team.name
+  policy_arn = "arn:aws:iam::aws:policy/ReadOnlyAccess"
 }
 
 resource "aws_iam_user_group_membership" "members" {
   for_each = aws_iam_user.team
   user     = each.value.name
   groups   = [aws_iam_group.data_team.name]
+}
+
+resource "aws_iam_role" "initialization_lambda" {
+  name = "totesys-dev-initialization-lambda-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+
+    Statement = [
+      {
+        Effect = "Allow"
+
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
+
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+
+  tags = local.common_tags
+}
+
+resource "aws_iam_role_policy_attachment" "initialization_vpc_access" {
+  role       = aws_iam_role.initialization_lambda.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+}
+
+resource "aws_iam_role_policy" "initialization_secret_access" {
+  name = "totesys-dev-initialization-secret-access"
+  role = aws_iam_role.schema_lambda.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+
+    Statement = [
+      {
+        Effect = "Allow"
+
+        Action = [
+          "secretsmanager:GetSecretValue",
+          "secretsmanager:DescribeSecret"
+        ]
+
+        Resource = (
+          aws_db_instance.warehouse
+          .master_user_secret[0]
+          .secret_arn
+        )
+      }
+    ]
+  })
 }
