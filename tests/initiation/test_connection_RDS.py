@@ -1,6 +1,6 @@
 from unittest.mock import patch
 
-from src.initiation.connection_RDS import get_warehouse_connection
+from src.initialization.connection_RDS import get_warehouse_connection
 
 
 @patch("src.initiation.connection_RDS.psycopg2.connect")

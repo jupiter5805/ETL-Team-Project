@@ -1,6 +1,6 @@
 from unittest.mock import Mock
 
-from src.initiation.create_tables import create_tables
+from src.initialization.create_tables import create_tables
 
 
 def test_create_tables_executes_ddl_for_all_star_schema_tables():

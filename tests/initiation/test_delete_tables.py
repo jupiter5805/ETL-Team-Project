@@ -1,6 +1,6 @@
 from unittest.mock import Mock
 
-from src.initiation.delete_tables import delete_tables
+from src.initialization.delete_tables import delete_tables
 
 
 def test_delete_tables_drops_all_star_schema_tables():
