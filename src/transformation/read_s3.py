@@ -3,7 +3,33 @@ import json
 import boto3
 
 
-def read_table_data_from_s3(bucket_name, object_key):
+def list_all_objects(
+    s3_client,
+    bucket_name,
+    prefix,
+):
+    """List all S3 objects under a prefix using pagination."""
+    paginator = s3_client.get_paginator(
+        "list_objects_v2"
+    )
+
+    objects = []
+
+    for page in paginator.paginate(
+        Bucket=bucket_name,
+        Prefix=prefix,
+    ):
+        objects.extend(
+            page.get("Contents", [])
+        )
+
+    return objects
+
+
+def read_table_data_from_s3(
+    bucket_name,
+    object_key,
+):
     """Read JSON data from an exact S3 object key."""
     s3 = boto3.client("s3")
 
@@ -17,18 +43,20 @@ def read_table_data_from_s3(bucket_name, object_key):
     return json.loads(data)
 
 
-def read_latest_table_data(bucket_name, table_name):
+def read_latest_table_data(
+    bucket_name,
+    table_name,
+):
     """Read the most recently uploaded raw file for a table."""
     s3 = boto3.client("s3")
 
     prefix = f"raw/{table_name}/"
 
-    response = s3.list_objects_v2(
-        Bucket=bucket_name,
-        Prefix=prefix,
+    objects = list_all_objects(
+        s3,
+        bucket_name,
+        prefix,
     )
-
-    objects = response.get("Contents", [])
 
     if not objects:
         return []
@@ -62,12 +90,11 @@ def read_current_table_state(
 
     prefix = f"raw/{table_name}/"
 
-    response = s3.list_objects_v2(
-        Bucket=bucket_name,
-        Prefix=prefix,
+    objects = list_all_objects(
+        s3,
+        bucket_name,
+        prefix,
     )
-
-    objects = response.get("Contents", [])
 
     if not objects:
         return []
@@ -89,6 +116,10 @@ def read_current_table_state(
         rows = json.loads(data)
 
         for row in rows:
-            current_state[row[primary_key]] = row
+            current_state[
+                row[primary_key]
+            ] = row
 
-    return list(current_state.values())
+    return list(
+        current_state.values()
+    )

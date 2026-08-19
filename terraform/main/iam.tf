@@ -218,3 +218,58 @@ resource "aws_iam_role_policy" "loading_s3_access" {
     ]
   })
 }
+# Dashboard Query Lambda role
+resource "aws_iam_role" "dashboard_query_lambda" {
+  name = "totesys-dev-dashboard-query-lambda-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+
+    Statement = [
+      {
+        Effect = "Allow"
+
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
+
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+}
+
+
+# Allows the Dashboard Query Lambda to run inside the VPC.
+resource "aws_iam_role_policy_attachment" "dashboard_query_vpc_access" {
+  role       = aws_iam_role.dashboard_query_lambda.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+}
+
+
+# Allows the Dashboard Query Lambda to read the RDS master secret.
+resource "aws_iam_role_policy" "dashboard_query_secret_access" {
+  name = "totesys-dev-dashboard-query-secret-access"
+  role = aws_iam_role.dashboard_query_lambda.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+
+    Statement = [
+      {
+        Effect = "Allow"
+
+        Action = [
+          "secretsmanager:GetSecretValue",
+          "secretsmanager:DescribeSecret"
+        ]
+
+        Resource = (
+          aws_db_instance.warehouse
+          .master_user_secret[0]
+          .secret_arn
+        )
+      }
+    ]
+  })
+}

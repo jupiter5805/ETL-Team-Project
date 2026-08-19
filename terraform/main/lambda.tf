@@ -382,3 +382,74 @@ resource "aws_cloudwatch_event_target" "loading_target" {
     aws_lambda_permission.allow_eventbridge_loading
   ]
 }
+# Dashboard Query Lambda package
+data "archive_file" "dashboard_query_lambda" {
+  type = "zip"
+
+  source_dir = (
+    "${path.module}/../../src"
+  )
+
+  output_path = (
+    "${path.module}/../../dashboard_query_lambda.zip"
+  )
+
+  excludes = [
+    "__pycache__",
+    "*.pyc",
+  ]
+}
+
+
+# Dashboard Query Lambda
+resource "aws_lambda_function" "dashboard_query" {
+  function_name = "warehouse-dashboard-query"
+
+  filename = (
+    data.archive_file.dashboard_query_lambda.output_path
+  )
+
+  source_code_hash = (
+    data.archive_file.dashboard_query_lambda.output_base64sha256
+  )
+
+  role = aws_iam_role.dashboard_query_lambda.arn
+
+  runtime = "python3.13"
+
+  handler = (
+    "dashboard_query.lambda_function.lambda_handler"
+  )
+
+  layers = [
+    aws_lambda_layer_version.psycopg2.arn
+  ]
+
+  timeout     = 30
+  memory_size = 256
+
+  environment {
+    variables = {
+      DB_HOST = aws_db_instance.warehouse.address
+      DB_PORT = tostring(aws_db_instance.warehouse.port)
+      DB_NAME = aws_db_instance.warehouse.db_name
+
+      DB_SECRET_ARN = (
+        aws_db_instance.warehouse
+        .master_user_secret[0]
+        .secret_arn
+      )
+    }
+  }
+
+  vpc_config {
+    subnet_ids = [
+      aws_subnet.private_a.id,
+      aws_subnet.private_b.id
+    ]
+
+    security_group_ids = [
+      aws_security_group.lambda.id
+    ]
+  }
+}

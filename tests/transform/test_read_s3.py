@@ -11,7 +11,9 @@ from src.transformation.read_s3 import (
 
 
 @patch("src.transformation.read_s3.boto3.client")
-def test_read_table_data_from_exact_s3_key(mock_boto_client):
+def test_read_table_data_from_exact_s3_key(
+    mock_boto_client,
+):
     mock_s3 = MagicMock()
     mock_boto_client.return_value = mock_s3
 
@@ -24,7 +26,9 @@ def test_read_table_data_from_exact_s3_key(mock_boto_client):
 
     mock_s3.get_object.return_value = {
         "Body": BytesIO(
-            json.dumps(currency_data).encode()
+            json.dumps(
+                currency_data
+            ).encode()
         )
     }
 
@@ -40,29 +44,62 @@ def test_read_table_data_from_exact_s3_key(mock_boto_client):
         Key="raw/currency/exact-file.json",
     )
 
-    mock_s3.list_objects_v2.assert_not_called()
+    mock_s3.get_paginator.assert_not_called()
 
 
 @patch("src.transformation.read_s3.boto3.client")
-def test_read_latest_table_data(mock_boto_client):
+def test_read_latest_table_data(
+    mock_boto_client,
+):
     mock_s3 = MagicMock()
     mock_boto_client.return_value = mock_s3
 
-    older_time = datetime(2026, 8, 18, 10, 0)
-    newer_time = datetime(2026, 8, 19, 10, 0)
+    paginator = MagicMock()
 
-    mock_s3.list_objects_v2.return_value = {
-        "Contents": [
-            {
-                "Key": "raw/department/older.json",
-                "LastModified": older_time,
-            },
-            {
-                "Key": "raw/department/newer.json",
-                "LastModified": newer_time,
-            },
-        ]
-    }
+    mock_s3.get_paginator.return_value = (
+        paginator
+    )
+
+    older_time = datetime(
+        2026,
+        8,
+        18,
+        10,
+        0,
+    )
+
+    newer_time = datetime(
+        2026,
+        8,
+        19,
+        10,
+        0,
+    )
+
+    paginator.paginate.return_value = [
+        {
+            "Contents": [
+                {
+                    "Key": (
+                        "raw/department/"
+                        "older.json"
+                    ),
+                    "LastModified": older_time,
+                }
+            ]
+        },
+        {
+            "Contents": [
+                {
+                    "Key": (
+                        "raw/department/"
+                        "newer.json"
+                    ),
+                    "LastModified": newer_time,
+                }
+            ]
+        },
+    ]
 
     department_data = [
         {
@@ -73,7 +110,9 @@ def test_read_latest_table_data(mock_boto_client):
 
     mock_s3.get_object.return_value = {
         "Body": BytesIO(
-            json.dumps(department_data).encode()
+            json.dumps(
+                department_data
+            ).encode()
         )
     }
 
@@ -84,7 +123,11 @@ def test_read_latest_table_data(mock_boto_client):
 
     assert result == department_data
 
-    mock_s3.list_objects_v2.assert_called_once_with(
+    mock_s3.get_paginator.assert_called_once_with(
+        "list_objects_v2"
+    )
+
+    paginator.paginate.assert_called_once_with(
         Bucket="test-ingestion-bucket",
         Prefix="raw/department/",
     )
@@ -102,7 +145,15 @@ def test_read_latest_table_data_returns_empty_list_when_no_files(
     mock_s3 = MagicMock()
     mock_boto_client.return_value = mock_s3
 
-    mock_s3.list_objects_v2.return_value = {}
+    paginator = MagicMock()
+
+    mock_s3.get_paginator.return_value = (
+        paginator
+    )
+
+    paginator.paginate.return_value = [
+        {}
+    ]
 
     result = read_latest_table_data(
         "test-ingestion-bucket",
@@ -121,26 +172,67 @@ def test_read_current_table_state_rebuilds_latest_rows(
     mock_s3 = MagicMock()
     mock_boto_client.return_value = mock_s3
 
-    first_time = datetime(2026, 8, 18, 10, 0)
-    second_time = datetime(2026, 8, 19, 10, 0)
-    third_time = datetime(2026, 8, 19, 11, 0)
+    paginator = MagicMock()
 
-    mock_s3.list_objects_v2.return_value = {
-        "Contents": [
-            {
-                "Key": "raw/department/first.json",
-                "LastModified": first_time,
-            },
-            {
-                "Key": "raw/department/second.json",
-                "LastModified": second_time,
-            },
-            {
-                "Key": "raw/department/third.json",
-                "LastModified": third_time,
-            },
-        ]
-    }
+    mock_s3.get_paginator.return_value = (
+        paginator
+    )
+
+    first_time = datetime(
+        2026,
+        8,
+        18,
+        10,
+        0,
+    )
+
+    second_time = datetime(
+        2026,
+        8,
+        19,
+        10,
+        0,
+    )
+
+    third_time = datetime(
+        2026,
+        8,
+        19,
+        11,
+        0,
+    )
+
+    paginator.paginate.return_value = [
+        {
+            "Contents": [
+                {
+                    "Key": (
+                        "raw/department/"
+                        "first.json"
+                    ),
+                    "LastModified": first_time,
+                },
+                {
+                    "Key": (
+                        "raw/department/"
+                        "second.json"
+                    ),
+                    "LastModified": second_time,
+                },
+            ]
+        },
+        {
+            "Contents": [
+                {
+                    "Key": (
+                        "raw/department/"
+                        "third.json"
+                    ),
+                    "LastModified": third_time,
+                }
+            ]
+        },
+    ]
 
     first_data = [
         {
@@ -165,17 +257,23 @@ def test_read_current_table_state_rebuilds_latest_rows(
     mock_s3.get_object.side_effect = [
         {
             "Body": BytesIO(
-                json.dumps(first_data).encode()
+                json.dumps(
+                    first_data
+                ).encode()
             )
         },
         {
             "Body": BytesIO(
-                json.dumps(second_data).encode()
+                json.dumps(
+                    second_data
+                ).encode()
             )
         },
         {
             "Body": BytesIO(
-                json.dumps(third_data).encode()
+                json.dumps(
+                    third_data
+                ).encode()
             )
         },
     ]
@@ -197,6 +295,15 @@ def test_read_current_table_state_rebuilds_latest_rows(
         },
     ]
 
+    mock_s3.get_paginator.assert_called_once_with(
+        "list_objects_v2"
+    )
+
+    paginator.paginate.assert_called_once_with(
+        Bucket="test-ingestion-bucket",
+        Prefix="raw/department/",
+    )
+
 
 @patch("src.transformation.read_s3.boto3.client")
 def test_read_current_table_state_returns_empty_when_no_files(
@@ -205,7 +312,15 @@ def test_read_current_table_state_returns_empty_when_no_files(
     mock_s3 = MagicMock()
     mock_boto_client.return_value = mock_s3
 
-    mock_s3.list_objects_v2.return_value = {}
+    paginator = MagicMock()
+
+    mock_s3.get_paginator.return_value = (
+        paginator
+    )
+
+    paginator.paginate.return_value = [
+        {}
+    ]
 
     result = read_current_table_state(
         "test-ingestion-bucket",
@@ -214,3 +329,5 @@ def test_read_current_table_state_returns_empty_when_no_files(
     )
 
     assert result == []
+
+    mock_s3.get_object.assert_not_called()

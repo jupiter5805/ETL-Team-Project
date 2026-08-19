@@ -9,3 +9,4 @@ pip-audit
 pyarrow
 moto
 flake8
+streamlit
