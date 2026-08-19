@@ -8,3 +8,4 @@ bandit
 pip-audit
 pyarrow
 moto
+flake8

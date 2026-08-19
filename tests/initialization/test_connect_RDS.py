@@ -17,10 +17,13 @@ def test_get_connection_uses_secret_and_env_vars(monkeypatch):
     client = boto3.client("secretsmanager", region_name="eu-west-2")
     client.create_secret(
         Name="warehouse-secret",
-        SecretString=json.dumps({"username": "test-user", "password": "test-pass"}),
+        SecretString=json.dumps(
+            {"username": "test-user", "password": "test-pass"}),
     )
 
-    with patch("src.initialization.connect_RDS.psycopg2.connect") as mock_connect:
+    with patch(
+        "src.initialization.connect_RDS.psycopg2.connect"
+    ) as mock_connect:
         get_connection()
         mock_connect.assert_called_once_with(
             host="test-host", port=5432, dbname="test-db",

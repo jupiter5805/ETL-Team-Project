@@ -1,10 +1,16 @@
-import pytest
 from unittest.mock import MagicMock, patch
 from datetime import date, datetime, time
 from decimal import Decimal
 import json
 
-from src.ingestion.extract import extract_table, extract_updated_rows, rows_to_json, serialise_value, extract_all_tables, TABLES
+from src.ingestion.extract import (
+    TABLES,
+    extract_all_tables,
+    extract_table,
+    extract_updated_rows,
+    rows_to_json,
+    serialise_value,
+)
 
 
 def test_extract_table_returns_rows_correctly():
@@ -53,6 +59,7 @@ def test_serialise_value_converts_date_time_formats():
     dt = datetime(2024, 1, 1, 12, 30)
     d = date(2024, 1, 1)
     t = time(12, 30)
+
     assert serialise_value(dt) == dt.isoformat()
     assert serialise_value(d) == d.isoformat()
     assert serialise_value(t) == t.isoformat()
@@ -64,29 +71,44 @@ def test_serialise_value_converts_decimal_to_string():
 
 def test_rows_to_json_returns_json():
     rows = [{"test": 1, "rows": 2}]
+
     result = rows_to_json(rows)
-    parsed = json.loads(result)  # raises if not valid JSON
+    parsed = json.loads(result)
+
     assert parsed == [{"test": 1, "rows": 2}]
 
 
 def test_rows_to_json_serialises_values():
-    rows = [{"id": 1, "created_at": datetime(
-        2024, 1, 1), "amount": Decimal("5.00")}]
+    rows = [
+        {
+            "id": 1,
+            "created_at": datetime(2024, 1, 1),
+            "amount": Decimal("5.00"),
+        }
+    ]
+
     result = rows_to_json(rows)
+
     assert '"id": 1' in result
     assert '"amount": "5.00"' in result
 
 
 @patch("src.ingestion.extract.rows_to_json")
 @patch("src.ingestion.extract.extract_table")
-def test_extract_all_tables_yields_for_each_table(mock_extract_table, mock_rows_to_json):
+def test_extract_all_tables_yields_for_each_table(
+    mock_extract_table,
+    mock_rows_to_json,
+):
     mock_extract_table.return_value = [{"id": 1}]
     mock_rows_to_json.return_value = '[{"id": 1}]'
     mock_conn = MagicMock()
 
     results = list(extract_all_tables(mock_conn))
 
-    assert results == [(table, '[{"id": 1}]') for table in TABLES]
+    assert results == [
+        (table, '[{"id": 1}]')
+        for table in TABLES
+    ]
     assert mock_extract_table.call_count == len(TABLES)
 
 
@@ -113,7 +135,6 @@ def test_extract_all_tables_uses_incremental_window(
     )
 
     assert len(results) == len(TABLES)
-
     assert mock_extract_updated_rows.call_count == len(TABLES)
 
     for table_name in TABLES:

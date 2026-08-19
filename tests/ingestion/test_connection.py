@@ -19,6 +19,7 @@ def test_check_connection_returns_database_and_user(mock_get_conn):
     assert result == ("totesys", "test_user")
     mock_conn.close.assert_called_once()
 
+
 @mock_aws
 def test_get_totesys_connection_uses_secrets_manager(monkeypatch):
     monkeypatch.setenv("TOTESYS_SECRET_NAME", "totesys-db-credentials")
