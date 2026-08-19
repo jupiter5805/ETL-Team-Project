@@ -8,7 +8,7 @@ import pytest
 SRC_DIR = Path(__file__).resolve().parents[2] / "src"
 sys.path.insert(0, str(SRC_DIR))
 
-import dashboard_query.lambda_function as dashboard
+import dashboard_query.lambda_function as dashboard  # noqa: E402
 
 
 def test_rows_to_dicts():
