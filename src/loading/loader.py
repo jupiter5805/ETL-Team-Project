@@ -1,14 +1,4 @@
-import os
-import psycopg2
-
-def get_connection():
-    return psycopg2.connect(
-        host=os.environ["RDS_HOST"],
-        port=os.environ.get("RDS_PORT", 5432),
-        database=os.environ["RDS_DATABASE"],
-        user=os.environ["RDS_USER"],
-        password=os.environ["RDS_PASSWORD"]
-    )
+from src.loading.connect_RDS import get_connection
 
 def load_staff(cur, staff_data):
     for staff in staff_data:
