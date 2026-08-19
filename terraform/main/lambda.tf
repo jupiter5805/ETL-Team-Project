@@ -88,7 +88,7 @@ resource "aws_lambda_function" "ingestion" {
 
   handler = "ingestion.main.lambda_handler"
 
-  timeout = 60 
+  timeout     = 60
   memory_size = 512
 
   filename = data.archive_file.lambda.output_path
@@ -101,6 +101,100 @@ resource "aws_lambda_function" "ingestion" {
     variables = {
       INGESTION_BUCKET_NAME = aws_s3_bucket.ingestion.bucket
       TOTESYS_SECRET_NAME   = data.aws_secretsmanager_secret.totesys_db.name
+    }
+  }
+}
+
+resource "aws_iam_role" "transform_lambda_execution" {
+  name = "lambda_transform_role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+
+    Statement = [{
+      Effect = "Allow"
+
+      Principal = {
+        Service = "lambda.amazonaws.com"
+      }
+
+      Action = "sts:AssumeRole"
+    }]
+  })
+}
+
+resource "aws_iam_policy" "transform_lambda_s3" {
+  name = "lambda_transform_s3_policy"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject"
+        ]
+        Resource = "${aws_s3_bucket.ingestion.arn}/*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:ListBucket"
+        ]
+        Resource = aws_s3_bucket.ingestion.arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:PutObject"
+        ]
+        Resource = "${aws_s3_bucket.processed.arn}/*"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "transform_lambda_s3" {
+  role       = aws_iam_role.transform_lambda_execution.name
+  policy_arn = aws_iam_policy.transform_lambda_s3.arn
+}
+
+resource "aws_iam_role_policy_attachment" "transform_lambda_logs" {
+  role       = aws_iam_role.transform_lambda_execution.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+data "archive_file" "transform_lambda" {
+  type        = "zip"
+  source_dir  = "${path.module}/../../src"
+  output_path = "${path.module}/../../transform_lambda.zip"
+}
+
+resource "aws_lambda_function" "transform" {
+  function_name = "database-automated-transform"
+
+  role = aws_iam_role.transform_lambda_execution.arn
+
+  runtime = "python3.13"
+
+  handler = "transformation.lambda_function.lambda_handler"
+
+  timeout     = 60
+  memory_size = 512
+
+  filename = data.archive_file.transform_lambda.output_path
+
+  source_code_hash = data.archive_file.transform_lambda.output_base64sha256
+
+  layers = [
+    "arn:aws:lambda:eu-west-2:336392948345:layer:AWSSDKPandas-Python313:16"
+  ]
+
+  environment {
+    variables = {
+      INGESTION_BUCKET_NAME = aws_s3_bucket.ingestion.bucket
+      PROCESSED_BUCKET_NAME = aws_s3_bucket.processed.bucket
     }
   }
 }
