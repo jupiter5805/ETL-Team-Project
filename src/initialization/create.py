@@ -1,6 +1,6 @@
 def create_tables(connection):
     with connection.cursor() as cursor:
-        cur.execute("""
+        cursor.execute("""
             CREATE TABLE IF NOT EXISTS dim_staff
             (
                 staff_id INT PRIMARY KEY NOT NULL,
