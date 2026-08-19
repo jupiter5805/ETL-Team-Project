@@ -1,6 +1,6 @@
 def delete_tables(connection):
      with connection.cursor() as cursor:
-        cur.execute("""
+        cursor.execute("""
             DROP TABLE IF EXISTS fact_sales_order CASCADE;
             DROP TABLE IF EXISTS dim_staff CASCADE;
             DROP TABLE IF EXISTS dim_date CASCADE;

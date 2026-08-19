@@ -1,10 +1,14 @@
-from src.initialization.connect_rds import get_connection
-from src.initialization.delete_table import delete_tables
-from src.initialization.create_table import create_tables
+import logging
+
+from src.initialization.seed import seed
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
 
 def lambda_handler(event, context):
-    connection = get_connection()
-    delete_tables(connection)
-    create_tables(connection)
-    connection.commit()
-    connection.close()
+    logger.info("Starting warehouse schema seed")
+    seed()
+    logger.info("Warehouse schema seed success")
+
+    return {"status": "success"}
