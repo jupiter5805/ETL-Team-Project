@@ -320,4 +320,25 @@ def test_lambda_handler_raises_error(mock_read):
         lambda_handler(event, None)
         assert False
     except Exception as error:
-        assert str(error) == "S3 read failed"    
+        assert str(error) == "S3 read failed"
+
+@patch.dict("os.environ", {
+    "INGESTION_BUCKET_NAME": "test-ingestion-bucket",
+    "PROCESSED_BUCKET_NAME": "test-processed-bucket"
+})
+@patch("src.transformation.lambda_function.create_parquet")
+@patch("src.transformation.lambda_function.upload_parquet_to_s3")
+def test_lambda_handler_ignores_unsupported_table(mock_upload, mock_create_parquet):
+    event = {
+        "Records": [{
+            "s3": {
+                "object": {"key": "raw/payment/test.json"}
+            }
+        }]
+    }
+
+    result = lambda_handler(event, None)
+
+    assert result == {"table_name": "payment", "status": "ignored"}
+    mock_create_parquet.assert_not_called()
+    mock_upload.assert_not_called()

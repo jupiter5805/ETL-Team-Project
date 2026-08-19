@@ -1,8 +1,8 @@
 import logging
 import os
 
-from src.transformation.read_s3 import read_latest_table_data
-from src.transformation.transform import (
+from .read_s3 import read_latest_table_data
+from .transform import (
     transform_currency,
     transform_design,
     transform_location,
@@ -11,7 +11,7 @@ from src.transformation.transform import (
     transform_date,
     transform_sales_order
 )
-from src.transformation.write_parquet import (
+from .write_parquet import (
     create_parquet,
     upload_parquet_to_s3
 )
@@ -105,6 +105,13 @@ def lambda_handler(event, context):
             )
 
             output_table = "dim_counterparty"
+
+        else:
+            logger.info(f"Ignoring unsupported table: {table_name}")
+            return {
+                "table_name": table_name,
+                "status": "ignored"
+            }
 
         file_name = f"/tmp/{output_table}.parquet"
 
