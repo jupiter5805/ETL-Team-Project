@@ -22,115 +22,127 @@ logger.setLevel(logging.INFO)
 
 
 def lambda_handler(event, context):
-    ingestion_bucket = os.environ["INGESTION_BUCKET_NAME"]
-    processed_bucket = os.environ["PROCESSED_BUCKET_NAME"]
+    try:
+        ingestion_bucket = os.environ["INGESTION_BUCKET_NAME"]
+        processed_bucket = os.environ["PROCESSED_BUCKET_NAME"]
 
-    logger.info("Transformation Lambda started")
+        logger.info("Transformation Lambda started")
 
-    object_key = event["Records"][0]["s3"]["object"]["key"]
-    table_name = object_key.split("/")[1]
+        object_key = event["Records"][0]["s3"]["object"]["key"]
+        table_name = object_key.split("/")[1]
 
-    if table_name == "currency":
-        data = read_latest_table_data(
-            ingestion_bucket,
-            "currency"
-        )
-        transformed_data = transform_currency(data)
-        output_table = "dim_currency"
+        logger.info(f"Processing file: {object_key}")
+        logger.info(f"Source table: {table_name}")
 
-    elif table_name == "design":
-        data = read_latest_table_data(
-            ingestion_bucket,
-            "design"
-        )
-        transformed_data = transform_design(data)
-        output_table = "dim_design"
+        if table_name == "currency":
+            data = read_latest_table_data(
+                ingestion_bucket,
+                "currency"
+            )
+            transformed_data = transform_currency(data)
+            output_table = "dim_currency"
 
-    elif table_name == "address":
-        data = read_latest_table_data(
-            ingestion_bucket,
-            "address"
-        )
-        transformed_data = transform_location(data)
-        output_table = "dim_location"
+        elif table_name == "design":
+            data = read_latest_table_data(
+                ingestion_bucket,
+                "design"
+            )
+            transformed_data = transform_design(data)
+            output_table = "dim_design"
 
-    elif table_name == "sales_order":
-        data = read_latest_table_data(
-            ingestion_bucket,
-            "sales_order"
-        )
+        elif table_name == "address":
+            data = read_latest_table_data(
+                ingestion_bucket,
+                "address"
+            )
+            transformed_data = transform_location(data)
+            output_table = "dim_location"
 
-        transformed_data = transform_sales_order(data)
-        transformed_date_data = transform_date(data)
+        elif table_name == "sales_order":
+            data = read_latest_table_data(
+                ingestion_bucket,
+                "sales_order"
+            )
 
-        output_table = "fact_sales_order"
-        date_output_table = "dim_date"
+            transformed_data = transform_sales_order(data)
+            transformed_date_data = transform_date(data)
 
-    elif table_name == "staff":
-        staff_data = read_latest_table_data(
-            ingestion_bucket,
-            "staff"
-        )
+            output_table = "fact_sales_order"
+            date_output_table = "dim_date"
 
-        department_data = read_latest_table_data(
-            ingestion_bucket,
-            "department"
-        )
+        elif table_name == "staff":
+            staff_data = read_latest_table_data(
+                ingestion_bucket,
+                "staff"
+            )
 
-        transformed_data = transform_staff(
-            staff_data,
-            department_data
-        )
+            department_data = read_latest_table_data(
+                ingestion_bucket,
+                "department"
+            )
 
-        output_table = "dim_staff"
+            transformed_data = transform_staff(
+                staff_data,
+                department_data
+            )
 
-    elif table_name == "counterparty":
-        counterparty_data = read_latest_table_data(
-            ingestion_bucket,
-            "counterparty"
-        )
+            output_table = "dim_staff"
 
-        address_data = read_latest_table_data(
-            ingestion_bucket,
-            "address"
-        )
+        elif table_name == "counterparty":
+            counterparty_data = read_latest_table_data(
+                ingestion_bucket,
+                "counterparty"
+            )
 
-        transformed_data = transform_counterparty(
-            counterparty_data,
-            address_data
-        )
+            address_data = read_latest_table_data(
+                ingestion_bucket,
+                "address"
+            )
 
-        output_table = "dim_counterparty"
+            transformed_data = transform_counterparty(
+                counterparty_data,
+                address_data
+            )
 
-    file_name = f"/tmp/{output_table}.parquet"
+            output_table = "dim_counterparty"
 
-    create_parquet(
-        transformed_data,
-        file_name
-    )
-
-    uploaded_file = upload_parquet_to_s3(
-        file_name,
-        output_table,
-        processed_bucket
-    )
-
-    if table_name == "sales_order":
-        date_file_name = "/tmp/dim_date.parquet"
+        file_name = f"/tmp/{output_table}.parquet"
 
         create_parquet(
-            transformed_date_data,
-            date_file_name
+            transformed_data,
+            file_name
         )
 
-        upload_parquet_to_s3(
-            date_file_name,
-            date_output_table,
+        uploaded_file = upload_parquet_to_s3(
+            file_name,
+            output_table,
             processed_bucket
         )
 
-    return {
-        "table_name": table_name,
-        "output_table": output_table,
-        "uploaded_file": uploaded_file
-    }
+        logger.info(f"Uploaded transformed file: {uploaded_file}")
+
+        if table_name == "sales_order":
+            date_file_name = "/tmp/dim_date.parquet"
+
+            create_parquet(
+                transformed_date_data,
+                date_file_name
+            )
+
+            date_uploaded_file = upload_parquet_to_s3(
+                date_file_name,
+                date_output_table,
+                processed_bucket
+            )
+
+            logger.info(f"Uploaded date file: {date_uploaded_file}")
+
+        return {
+            "table_name": table_name,
+            "output_table": output_table,
+            "uploaded_file": uploaded_file
+        }
+
+    except Exception:
+        logger.exception("Transformation Lambda failed")
+        raise

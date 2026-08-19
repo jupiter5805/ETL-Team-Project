@@ -298,3 +298,26 @@ def test_lambda_handler_transforms_counterparty(
     )
 
     assert result["uploaded_file"] == "dim_counterparty/test.parquet"
+
+
+@patch.dict("os.environ", {
+    "INGESTION_BUCKET_NAME": "test-ingestion-bucket",
+    "PROCESSED_BUCKET_NAME": "test-processed-bucket"
+})
+@patch("src.transformation.lambda_function.read_latest_table_data")
+def test_lambda_handler_raises_error(mock_read):
+    event = {
+        "Records": [{
+            "s3": {
+                "object": {"key": "raw/currency/test.json"}
+            }
+        }]
+    }
+
+    mock_read.side_effect = Exception("S3 read failed")
+
+    try:
+        lambda_handler(event, None)
+        assert False
+    except Exception as error:
+        assert str(error) == "S3 read failed"    
