@@ -264,3 +264,71 @@ resource "aws_lambda_function" "transform" {
     }
   }
 }
+# Loading Lambda package
+data "archive_file" "loading_lambda" {
+  type = "zip"
+
+  source_dir = (
+    "${path.module}/../../src"
+  )
+
+  output_path = (
+    "${path.module}/../../loading_lambda.zip"
+  )
+
+  excludes = [
+    "__pycache__",
+    "*.pyc",
+  ]
+}
+
+
+resource "aws_lambda_function" "loading" {
+  function_name = "database-automated-loading"
+
+  filename = (
+    data.archive_file.loading_lambda.output_path
+  )
+
+  source_code_hash = (
+    data.archive_file.loading_lambda.output_base64sha256
+  )
+
+  role = aws_iam_role.loading_lambda.arn
+
+  runtime = "python3.13"
+  handler = "loading.lambda_function.lambda_handler"
+
+  layers = [
+    aws_lambda_layer_version.psycopg2.arn,
+    "arn:aws:lambda:eu-west-2:336392948345:layer:AWSSDKPandas-Python313:16"
+  ]
+
+  timeout     = 180
+  memory_size = 1024
+
+  environment {
+    variables = {
+      DB_HOST = aws_db_instance.warehouse.address
+      DB_PORT = tostring(aws_db_instance.warehouse.port)
+      DB_NAME = aws_db_instance.warehouse.db_name
+
+      DB_SECRET_ARN = (
+        aws_db_instance.warehouse
+        .master_user_secret[0]
+        .secret_arn
+      )
+    }
+  }
+
+  vpc_config {
+    subnet_ids = [
+      aws_subnet.private_a.id,
+      aws_subnet.private_b.id
+    ]
+
+    security_group_ids = [
+      aws_security_group.lambda.id
+    ]
+  }
+}

@@ -1,9 +1,9 @@
 import logging
 from urllib.parse import unquote_plus
 
-from src.loading.connect_RDS import get_connection
-from src.loading.reader import read_parquet_from_s3
-from src.loading.loader import (
+from .connect_RDS import get_connection
+from .reader import read_parquet_from_s3
+from .loader import (
     load_staff,
     load_location,
     load_design,

@@ -14,8 +14,8 @@ resource "aws_iam_group_policy" "tf_state_access" {
     Version = "2012-10-17"
     Statement = [
       {
-        Effect   = "Allow"
-        Action   = ["s3:GetObject", "s3:PutObject", "s3:ListBucket"]
+        Effect = "Allow"
+        Action = ["s3:GetObject", "s3:PutObject", "s3:ListBucket"]
         Resource = [
           "arn:aws:s3:::etl-project-tf-state",
           "arn:aws:s3:::etl-project-tf-state/*"
@@ -131,6 +131,89 @@ resource "aws_iam_role_policy" "initialization_secret_access" {
           .master_user_secret[0]
           .secret_arn
         )
+      }
+    ]
+  })
+}
+resource "aws_iam_role" "loading_lambda" {
+  name = "totesys-dev-loading-lambda-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+
+    Statement = [
+      {
+        Effect = "Allow"
+
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
+
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+}
+
+
+resource "aws_iam_role_policy_attachment" "loading_vpc_access" {
+  role       = aws_iam_role.loading_lambda.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+}
+
+
+resource "aws_iam_role_policy" "loading_secret_access" {
+  name = "totesys-dev-loading-secret-access"
+  role = aws_iam_role.loading_lambda.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+
+    Statement = [
+      {
+        Effect = "Allow"
+
+        Action = [
+          "secretsmanager:GetSecretValue",
+          "secretsmanager:DescribeSecret"
+        ]
+
+        Resource = (
+          aws_db_instance.warehouse
+          .master_user_secret[0]
+          .secret_arn
+        )
+      }
+    ]
+  })
+}
+
+
+resource "aws_iam_role_policy" "loading_s3_access" {
+  name = "totesys-dev-loading-s3-access"
+  role = aws_iam_role.loading_lambda.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+
+    Statement = [
+      {
+        Effect = "Allow"
+
+        Action = [
+          "s3:GetObject"
+        ]
+
+        Resource = "${aws_s3_bucket.processed.arn}/*"
+      },
+      {
+        Effect = "Allow"
+
+        Action = [
+          "s3:ListBucket"
+        ]
+
+        Resource = aws_s3_bucket.processed.arn
       }
     ]
   })

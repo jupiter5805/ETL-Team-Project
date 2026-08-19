@@ -10,7 +10,7 @@ resource "aws_sns_topic_subscription" "lambda_failure_email" {
 }
 
 
-resource "aws_cloudwatch_metric_alarm" "ingestion_failure_alarm" {
+resource "aws_cloudwatch_metric_alarm" "lambda_failure_alarm" {
   alarm_name          = "lambda-ingestion-failure"
   comparison_operator = "GreaterThanOrEqualToThreshold"
   evaluation_periods  = 1

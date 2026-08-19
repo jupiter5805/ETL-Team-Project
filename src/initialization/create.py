@@ -80,5 +80,12 @@ def create_tables(connection):
                 agreed_payment_date DATE NOT NULL REFERENCES dim_date(date_id),
                 agreed_delivery_date DATE NOT NULL REFERENCES dim_date(date_id),
                 agreed_delivery_location_id INT NOT NULL REFERENCES dim_location(location_id)
-            );      
+            );  
+            CREATE UNIQUE INDEX IF NOT EXISTS
+    fact_sales_order_version_idx
+ON fact_sales_order (
+    sales_order_id,
+    last_updated_date,
+    last_updated_time
+);    
         """)

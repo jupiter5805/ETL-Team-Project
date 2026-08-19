@@ -1,4 +1,4 @@
-from src.loading.connect_RDS import get_connection
+from .connect_RDS import get_connection
 
 
 def load_staff(cur, staff_data):
@@ -222,7 +222,13 @@ def load_sales_order(cur, sales_order_data):
             VALUES (
                 %s, %s, %s, %s, %s, %s,
                 %s, %s, %s, %s, %s, %s, %s, %s
-            );
+            )
+            ON CONFLICT (
+                sales_order_id,
+                last_updated_date,
+                last_updated_time
+            )
+            DO NOTHING;
             """,
             (
                 sales_order["sales_order_id"],
@@ -238,8 +244,8 @@ def load_sales_order(cur, sales_order_data):
                 sales_order["design_id"],
                 sales_order["agreed_payment_date"],
                 sales_order["agreed_delivery_date"],
-                sales_order["agreed_delivery_location_id"]
-            )
+                sales_order["agreed_delivery_location_id"],
+            ),
         )
 
 
