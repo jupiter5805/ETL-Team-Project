@@ -1,14 +1,5 @@
-import os
-import psycopg2
+from src.loading.connect_RDS import get_connection
 
-def get_connection():
-    return psycopg2.connect(
-        host=os.environ["RDS_HOST"],
-        port=os.environ.get("RDS_PORT", 5432),
-        database=os.environ["RDS_DATABASE"],
-        user=os.environ["RDS_USER"],
-        password=os.environ["RDS_PASSWORD"]
-    )
 
 def load_staff(cur, staff_data):
     for staff in staff_data:
@@ -40,6 +31,7 @@ def load_staff(cur, staff_data):
                 staff["email_address"]
             )
         )
+
 
 def load_location(cur, location_data):
     for location in location_data:
@@ -78,6 +70,7 @@ def load_location(cur, location_data):
             )
         )
 
+
 def load_design(cur, design_data):
     for design in design_data:
         cur.execute(
@@ -103,6 +96,7 @@ def load_design(cur, design_data):
             )
         )
 
+
 def load_currency(cur, currency_data):
     for currency in currency_data:
         cur.execute(
@@ -124,6 +118,7 @@ def load_currency(cur, currency_data):
                 currency["currency_name"]
             )
         )
+
 
 def load_counterparty(cur, counterparty_data):
     for counterparty in counterparty_data:
@@ -173,6 +168,7 @@ def load_counterparty(cur, counterparty_data):
             )
         )
 
+
 def load_date(cur, date_data):
     for date_record in date_data:
         cur.execute(
@@ -201,6 +197,7 @@ def load_date(cur, date_data):
                 date_record["quarter"]
             )
         )
+
 
 def load_sales_order(cur, sales_order_data):
     for sales_order in sales_order_data:
@@ -244,6 +241,7 @@ def load_sales_order(cur, sales_order_data):
                 sales_order["agreed_delivery_location_id"]
             )
         )
+
 
 def load_all(
     staff_data,
