@@ -1,7 +1,10 @@
 import logging
 import os
 
-from .read_s3 import read_latest_table_data
+from .read_s3 import (
+    read_current_table_state,
+    read_table_data_from_s3,
+)
 from .transform import (
     transform_currency,
     transform_design,
@@ -9,11 +12,11 @@ from .transform import (
     transform_staff,
     transform_counterparty,
     transform_date,
-    transform_sales_order
+    transform_sales_order,
 )
 from .write_parquet import (
     create_parquet,
-    upload_parquet_to_s3
+    upload_parquet_to_s3,
 )
 
 
@@ -31,37 +34,40 @@ def lambda_handler(event, context):
         object_key = event["Records"][0]["s3"]["object"]["key"]
         table_name = object_key.split("/")[1]
 
-        logger.info(f"Processing file: {object_key}")
-        logger.info(f"Source table: {table_name}")
+        logger.info("Processing file: %s", object_key)
+        logger.info("Source table: %s", table_name)
 
         if table_name == "currency":
-            data = read_latest_table_data(
+            data = read_table_data_from_s3(
                 ingestion_bucket,
-                "currency"
+                object_key,
             )
+
             transformed_data = transform_currency(data)
             output_table = "dim_currency"
 
         elif table_name == "design":
-            data = read_latest_table_data(
+            data = read_table_data_from_s3(
                 ingestion_bucket,
-                "design"
+                object_key,
             )
+
             transformed_data = transform_design(data)
             output_table = "dim_design"
 
         elif table_name == "address":
-            data = read_latest_table_data(
+            data = read_table_data_from_s3(
                 ingestion_bucket,
-                "address"
+                object_key,
             )
+
             transformed_data = transform_location(data)
             output_table = "dim_location"
 
         elif table_name == "sales_order":
-            data = read_latest_table_data(
+            data = read_table_data_from_s3(
                 ingestion_bucket,
-                "sales_order"
+                object_key,
             )
 
             transformed_data = transform_sales_order(data)
@@ -71,84 +77,186 @@ def lambda_handler(event, context):
             date_output_table = "dim_date"
 
         elif table_name == "staff":
-            staff_data = read_latest_table_data(
+            staff_data = read_table_data_from_s3(
                 ingestion_bucket,
-                "staff"
+                object_key,
             )
 
-            department_data = read_latest_table_data(
+            department_data = read_current_table_state(
                 ingestion_bucket,
-                "department"
+                "department",
+                "department_id",
             )
 
             transformed_data = transform_staff(
                 staff_data,
-                department_data
+                department_data,
+            )
+
+            output_table = "dim_staff"
+
+        elif table_name == "department":
+            staff_data = read_current_table_state(
+                ingestion_bucket,
+                "staff",
+                "staff_id",
+            )
+
+            if not staff_data:
+                logger.info(
+                    "No staff data available yet for department update"
+                )
+
+                return {
+                    "table_name": table_name,
+                    "status": "no_staff_data",
+                }
+
+            department_data = read_current_table_state(
+                ingestion_bucket,
+                "department",
+                "department_id",
+            )
+
+            transformed_data = transform_staff(
+                staff_data,
+                department_data,
             )
 
             output_table = "dim_staff"
 
         elif table_name == "counterparty":
-            counterparty_data = read_latest_table_data(
+            counterparty_data = read_table_data_from_s3(
                 ingestion_bucket,
-                "counterparty"
+                object_key,
             )
 
-            address_data = read_latest_table_data(
+            address_data = read_current_table_state(
                 ingestion_bucket,
-                "address"
+                "address",
+                "address_id",
             )
+
+            if not address_data:
+                logger.info(
+                    "No address data available yet "
+                    "for counterparty update"
+                )
+
+                return {
+                    "table_name": table_name,
+                    "status": "no_address_data",
+                }
 
             transformed_data = transform_counterparty(
                 counterparty_data,
-                address_data
+                address_data,
             )
 
             output_table = "dim_counterparty"
 
         else:
-            logger.info(f"Ignoring unsupported table: {table_name}")
+            logger.info(
+                "Ignoring unsupported table: %s",
+                table_name,
+            )
+
             return {
                 "table_name": table_name,
-                "status": "ignored"
+                "status": "ignored",
             }
 
         file_name = f"/tmp/{output_table}.parquet"
 
         create_parquet(
             transformed_data,
-            file_name
+            file_name,
         )
 
         uploaded_file = upload_parquet_to_s3(
             file_name,
             output_table,
-            processed_bucket
+            processed_bucket,
         )
 
-        logger.info(f"Uploaded transformed file: {uploaded_file}")
+        logger.info(
+            "Uploaded transformed file: %s",
+            uploaded_file,
+        )
+
+        result = {
+            "table_name": table_name,
+            "output_table": output_table,
+            "uploaded_file": uploaded_file,
+        }
 
         if table_name == "sales_order":
             date_file_name = "/tmp/dim_date.parquet"
 
             create_parquet(
                 transformed_date_data,
-                date_file_name
+                date_file_name,
             )
 
             date_uploaded_file = upload_parquet_to_s3(
                 date_file_name,
                 date_output_table,
-                processed_bucket
+                processed_bucket,
             )
 
-            logger.info(f"Uploaded date file: {date_uploaded_file}")
+            logger.info(
+                "Uploaded date file: %s",
+                date_uploaded_file,
+            )
 
-        return {
-            "table_name": table_name,
-            "output_table": output_table,
-            "uploaded_file": uploaded_file
-        }
+        if table_name == "address":
+            counterparty_data = read_current_table_state(
+                ingestion_bucket,
+                "counterparty",
+                "counterparty_id",
+            )
+
+            if counterparty_data:
+                current_address_data = read_current_table_state(
+                    ingestion_bucket,
+                    "address",
+                    "address_id",
+                )
+
+                transformed_counterparty_data = (
+                    transform_counterparty(
+                        counterparty_data,
+                        current_address_data,
+                    )
+                )
+
+                counterparty_file_name = (
+                    "/tmp/dim_counterparty.parquet"
+                )
+
+                create_parquet(
+                    transformed_counterparty_data,
+                    counterparty_file_name,
+                )
+
+                counterparty_uploaded_file = (
+                    upload_parquet_to_s3(
+                        counterparty_file_name,
+                        "dim_counterparty",
+                        processed_bucket,
+                    )
+                )
+
+                logger.info(
+                    "Refreshed dim_counterparty: %s",
+                    counterparty_uploaded_file,
+                )
+
+                result["counterparty_uploaded_file"] = (
+                    counterparty_uploaded_file
+                )
+
+        return result
 
     except Exception:
         logger.exception("Transformation Lambda failed")
