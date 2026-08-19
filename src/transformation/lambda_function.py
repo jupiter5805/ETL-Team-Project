@@ -1,5 +1,6 @@
 import logging
 import os
+from urllib.parse import unquote_plus
 
 from .read_s3 import (
     read_current_table_state,
@@ -31,7 +32,10 @@ def lambda_handler(event, context):
 
         logger.info("Transformation Lambda started")
 
-        object_key = event["Records"][0]["s3"]["object"]["key"]
+        object_key = unquote_plus(
+            event["Records"][0]["s3"]["object"]["key"]
+        )
+
         table_name = object_key.split("/")[1]
 
         logger.info("Processing file: %s", object_key)
@@ -166,7 +170,8 @@ def lambda_handler(event, context):
                 "status": "ignored",
             }
 
-        file_name = f"/tmp/{output_table}.parquet"
+        # AWS Lambda provides /tmp as writable temporary storage.
+        file_name = f"/tmp/{output_table}.parquet"  # nosec B108
 
         create_parquet(
             transformed_data,
@@ -191,7 +196,8 @@ def lambda_handler(event, context):
         }
 
         if table_name == "sales_order":
-            date_file_name = "/tmp/dim_date.parquet"
+            # AWS Lambda provides /tmp as writable temporary storage.
+            date_file_name = "/tmp/dim_date.parquet"  # nosec B108
 
             create_parquet(
                 transformed_date_data,
@@ -230,8 +236,9 @@ def lambda_handler(event, context):
                     )
                 )
 
+                # AWS Lambda provides /tmp as writable temporary storage.
                 counterparty_file_name = (
-                    "/tmp/dim_counterparty.parquet"
+                    "/tmp/dim_counterparty.parquet"  # nosec B108
                 )
 
                 create_parquet(

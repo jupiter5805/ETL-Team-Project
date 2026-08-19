@@ -48,3 +48,23 @@ resource "aws_cloudwatch_metric_alarm" "transformation_failure_alarm" {
     aws_sns_topic.lambda_failure_alerts.arn
   ]
 }
+resource "aws_cloudwatch_metric_alarm" "loading_failure_alarm" {
+  alarm_name          = "lambda-loading-failure"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  evaluation_periods  = 1
+  metric_name         = "Errors"
+  namespace           = "AWS/Lambda"
+  period              = 60
+  statistic           = "Sum"
+  threshold           = 1
+
+  dimensions = {
+    FunctionName = aws_lambda_function.loading.function_name
+  }
+
+  alarm_actions = [
+    aws_sns_topic.lambda_failure_alerts.arn
+  ]
+
+  treat_missing_data = "missing"
+}

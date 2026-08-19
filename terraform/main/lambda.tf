@@ -70,7 +70,8 @@ data "archive_file" "psycopg2_layer" {
   output_path = "${path.module}/../../psycopg2_layer.zip"
 }
 
-# Creates a Lambda layer called psycopg2-layer using the ZIP weabove.
+
+# Creates a Lambda layer called psycopg2-layer.
 resource "aws_lambda_layer_version" "psycopg2" {
   filename            = data.archive_file.psycopg2_layer.output_path
   layer_name          = "psycopg2-layer"
@@ -78,6 +79,7 @@ resource "aws_lambda_layer_version" "psycopg2" {
 
   source_code_hash = data.archive_file.psycopg2_layer.output_base64sha256
 }
+
 
 resource "aws_lambda_function" "ingestion" {
   function_name = "database-automated-ingestion"
@@ -95,7 +97,9 @@ resource "aws_lambda_function" "ingestion" {
 
   source_code_hash = data.archive_file.lambda.output_base64sha256
 
-  layers = [aws_lambda_layer_version.psycopg2.arn]
+  layers = [
+    aws_lambda_layer_version.psycopg2.arn
+  ]
 
   environment {
     variables = {
@@ -105,7 +109,8 @@ resource "aws_lambda_function" "ingestion" {
   }
 }
 
-#initialization
+
+# Initialization Lambda
 data "archive_file" "initialization_lambda" {
   type = "zip"
 
@@ -122,6 +127,7 @@ data "archive_file" "initialization_lambda" {
     "*.pyc",
   ]
 }
+
 
 resource "aws_lambda_function" "initialization" {
   function_name = "totesys-dev-initialization"
@@ -171,6 +177,9 @@ resource "aws_lambda_function" "initialization" {
     ]
   }
 }
+
+
+# Transformation Lambda
 resource "aws_iam_role" "transform_lambda_execution" {
   name = "lambda_transform_role"
 
@@ -188,6 +197,7 @@ resource "aws_iam_role" "transform_lambda_execution" {
     }]
   })
 }
+
 
 resource "aws_iam_policy" "transform_lambda_s3" {
   name = "lambda_transform_s3_policy"
@@ -221,21 +231,25 @@ resource "aws_iam_policy" "transform_lambda_s3" {
   })
 }
 
+
 resource "aws_iam_role_policy_attachment" "transform_lambda_s3" {
   role       = aws_iam_role.transform_lambda_execution.name
   policy_arn = aws_iam_policy.transform_lambda_s3.arn
 }
+
 
 resource "aws_iam_role_policy_attachment" "transform_lambda_logs" {
   role       = aws_iam_role.transform_lambda_execution.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
+
 data "archive_file" "transform_lambda" {
   type        = "zip"
   source_dir  = "${path.module}/../../src"
   output_path = "${path.module}/../../transform_lambda.zip"
 }
+
 
 resource "aws_lambda_function" "transform" {
   function_name = "database-automated-transform"
@@ -264,6 +278,8 @@ resource "aws_lambda_function" "transform" {
     }
   }
 }
+
+
 # Loading Lambda package
 data "archive_file" "loading_lambda" {
   type = "zip"
@@ -331,4 +347,38 @@ resource "aws_lambda_function" "loading" {
       aws_security_group.lambda.id
     ]
   }
+}
+
+
+# Run Loading Lambda automatically every 10 minutes.
+resource "aws_cloudwatch_event_rule" "loading_schedule" {
+  name                = "database-loading-schedule"
+  description         = "Run Loading Lambda every 10 minutes"
+  schedule_expression = "rate(10 minutes)"
+}
+
+
+# Allow EventBridge to invoke the Loading Lambda.
+resource "aws_lambda_permission" "allow_eventbridge_loading" {
+  statement_id  = "AllowExecutionFromEventBridgeLoading"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.loading.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.loading_schedule.arn
+}
+
+
+# Connect the 10-minute schedule to the Loading Lambda.
+resource "aws_cloudwatch_event_target" "loading_target" {
+  rule = aws_cloudwatch_event_rule.loading_schedule.name
+  arn  = aws_lambda_function.loading.arn
+
+  input = jsonencode({
+    mode        = "scheduled"
+    bucket_name = aws_s3_bucket.processed.id
+  })
+
+  depends_on = [
+    aws_lambda_permission.allow_eventbridge_loading
+  ]
 }
