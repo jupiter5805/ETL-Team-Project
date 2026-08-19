@@ -103,8 +103,6 @@ resource "aws_iam_role" "initialization_lambda" {
       }
     ]
   })
-
-  tags = local.common_tags
 }
 
 resource "aws_iam_role_policy_attachment" "initialization_vpc_access" {
@@ -114,7 +112,7 @@ resource "aws_iam_role_policy_attachment" "initialization_vpc_access" {
 
 resource "aws_iam_role_policy" "initialization_secret_access" {
   name = "totesys-dev-initialization-secret-access"
-  role = aws_iam_role.schema_lambda.id
+  role = aws_iam_role.initialization_lambda.id
 
   policy = jsonencode({
     Version = "2012-10-17"
