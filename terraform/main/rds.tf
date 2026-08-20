@@ -35,8 +35,8 @@ resource "aws_db_instance" "warehouse" {
   port           = 5432
 
   allocated_storage = 20
-  storage_type       = "gp3"
-  storage_encrypted  = true
+  storage_type      = "gp3"
+  storage_encrypted = true
 
   db_name  = "warehouse"
   username = "warehouse_admin"

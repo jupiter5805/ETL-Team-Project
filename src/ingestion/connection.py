@@ -41,4 +41,3 @@ def check_connection():
     cur.close()
     conn.close()
     return result
-

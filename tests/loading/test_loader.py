@@ -286,8 +286,11 @@ def test_load_sales_order_executes_insert():
 
     sql = cur.execute.call_args.args[0]
 
-    assert "INSERT INTO fact_sales_order" in sql
-    assert "sales_record_id" not in sql
+    assert "ON CONFLICT" in sql
+    assert "sales_order_id" in sql
+    assert "last_updated_date" in sql
+    assert "last_updated_time" in sql
+    assert "DO NOTHING" in sql
 
 
 @pytest.mark.parametrize(

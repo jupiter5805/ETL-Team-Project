@@ -1,15 +1,15 @@
-data "aws_availability_zones" "available"{
-    state = "available"
+data "aws_availability_zones" "available" {
+  state = "available"
 }
 
-resource "aws_vpc" "main"{
-    cidr_block = "10.0.0.0/16"
-    
-    enable_dns_support = true
-    enable_dns_hostnames = true
-    tags = {
-        Name = "totesys-dev-vpc"
-    }
+resource "aws_vpc" "main" {
+  cidr_block = "10.0.0.0/16"
+
+  enable_dns_support   = true
+  enable_dns_hostnames = true
+  tags = {
+    Name = "totesys-dev-vpc"
+  }
 }
 
 resource "aws_subnet" "private_a" {
@@ -93,4 +93,18 @@ resource "aws_vpc_endpoint" "secretsmanager" {
   ]
 
   private_dns_enabled = true
+}
+resource "aws_vpc_endpoint" "s3" {
+  vpc_id = aws_vpc.main.id
+
+  service_name      = "com.amazonaws.eu-west-2.s3"
+  vpc_endpoint_type = "Gateway"
+
+  route_table_ids = [
+    aws_vpc.main.default_route_table_id
+  ]
+
+  tags = {
+    Name = "totesys-dev-s3-endpoint"
+  }
 }

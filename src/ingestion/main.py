@@ -9,6 +9,7 @@ from .s3_export import upload_to_s3, get_last_run, save_last_run
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
+
 def lambda_handler(event, context):
     logger.info("Starting ingestion Lambda")
 
@@ -21,7 +22,11 @@ def lambda_handler(event, context):
     logger.info("Database connection established")
 
     try:
-        for table_name, json_body in extract_all_tables(connection, last_run):
+        for table_name, json_body in extract_all_tables(
+            connection,
+            last_run,
+            current_run,
+        ):
             logger.info("Processing table: %s", table_name)
 
             upload_to_s3(

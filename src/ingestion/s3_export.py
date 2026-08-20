@@ -24,6 +24,7 @@ def get_last_run(bucket_name):
             return None
         raise
 
+
 def save_last_run(bucket_name, last_run):
     s3 = boto3.client("s3")
 

@@ -1,32 +1,41 @@
-import boto3
 import json
 
-from .transform import transform_sales_order
-from .write_parquet import (
-    create_parquet,
-    upload_parquet_to_s3
-)
+import boto3
 
-def read_latest_table_data(bucket_name, table_name):
-    s3 = boto3.client("s3")
 
-    prefix = f"raw/{table_name}/"
+def list_all_objects(
+    s3_client,
+    bucket_name,
+    prefix,
+):
+    """List all S3 objects under a prefix using pagination."""
+    paginator = s3_client.get_paginator(
+        "list_objects_v2"
+    )
 
-    response = s3.list_objects_v2(
+    objects = []
+
+    for page in paginator.paginate(
         Bucket=bucket_name,
-        Prefix=prefix
-    )
+        Prefix=prefix,
+    ):
+        objects.extend(
+            page.get("Contents", [])
+        )
 
-    objects = response["Contents"]
+    return objects
 
-    latest_object = max(
-        objects,
-        key=lambda object: object["LastModified"]
-    )
+
+def read_table_data_from_s3(
+    bucket_name,
+    object_key,
+):
+    """Read JSON data from an exact S3 object key."""
+    s3 = boto3.client("s3")
 
     response = s3.get_object(
         Bucket=bucket_name,
-        Key=latest_object["Key"]
+        Key=object_key,
     )
 
     data = response["Body"].read()
@@ -34,31 +43,83 @@ def read_latest_table_data(bucket_name, table_name):
     return json.loads(data)
 
 
-if __name__ == "__main__":
+def read_latest_table_data(
+    bucket_name,
+    table_name,
+):
+    """Read the most recently uploaded raw file for a table."""
+    s3 = boto3.client("s3")
 
-    sales_order_data = read_latest_table_data(
-        "marvel-etl-project-ingestion",
-        "sales_order"
+    prefix = f"raw/{table_name}/"
+
+    objects = list_all_objects(
+        s3,
+        bucket_name,
+        prefix,
     )
 
-    transformed_sales_orders = transform_sales_order(
-        sales_order_data
+    if not objects:
+        return []
+
+    latest_object = max(
+        objects,
+        key=lambda item: item["LastModified"],
     )
 
-    create_parquet(
-        transformed_sales_orders,
-        "fact_sales_order.parquet"
+    response = s3.get_object(
+        Bucket=bucket_name,
+        Key=latest_object["Key"],
     )
 
-    uploaded_file = upload_parquet_to_s3(
-        "fact_sales_order.parquet",
-        "fact_sales_order",
-        "marvel-etl-project-processed"
+    data = response["Body"].read()
+
+    return json.loads(data)
+
+
+def read_current_table_state(
+    bucket_name,
+    table_name,
+    primary_key,
+):
+    """
+    Rebuild the latest state of a table from all raw incremental files.
+
+    Later versions of the same primary key replace earlier versions.
+    """
+    s3 = boto3.client("s3")
+
+    prefix = f"raw/{table_name}/"
+
+    objects = list_all_objects(
+        s3,
+        bucket_name,
+        prefix,
     )
 
-    print("First 3 transformed sales orders:")
-    print(transformed_sales_orders[:3])
+    if not objects:
+        return []
 
-    print(f"Total sales orders: {len(transformed_sales_orders)}")
+    objects = sorted(
+        objects,
+        key=lambda item: item["LastModified"],
+    )
 
-    print(f"Uploaded to: {uploaded_file}")
+    current_state = {}
+
+    for item in objects:
+        response = s3.get_object(
+            Bucket=bucket_name,
+            Key=item["Key"],
+        )
+
+        data = response["Body"].read()
+        rows = json.loads(data)
+
+        for row in rows:
+            current_state[
+                row[primary_key]
+            ] = row
+
+    return list(
+        current_state.values()
+    )
